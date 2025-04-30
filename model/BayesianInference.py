@@ -25,6 +25,12 @@ from utils import *
         infer: infer the probabilities for the inferring variable 
 """
 
+def capping_value(prob_a):
+    if prob_a < 0.10:
+        prob_a = 0.03
+    if prob_a > 0.97:
+        prob_a = 1.0
+    return prob_a
 
 class BayesianInferenceModel:
     def __init__(
@@ -214,16 +220,18 @@ class BayesianInferenceModel:
                         inf_agent=self.inf_agent,
                     )
                 if key in self.recorder:
-                    logits = self.recorder[key]
+                    logits = capping_value(self.recorder[key])
                 else:
-                    logits = get_likelihood(
-                        info,
-                        f"{var_dict[son]}",
-                        dataset_name=self.dataset_name,
-                        model=self.llm,
-                        verbose=self.verbose,
-                        variable=son,
-                        inf_agent=self.inf_agent,
+                    logits = capping_value(
+                            get_likelihood(
+                            info,
+                            f"{var_dict[son]}",
+                            dataset_name=self.dataset_name,
+                            model=self.llm,
+                            verbose=self.verbose,
+                            variable=son,
+                            inf_agent=self.inf_agent,
+                        )
                     )
                     # print(logits)
 
@@ -235,6 +243,25 @@ class BayesianInferenceModel:
             prob *= logits
 
         return prob, individual_likelihoods, node_results_tracker
+
+    def hypo_propagation(self):
+        prev_belief = self.variables["Previous Belief"]
+        belief = self.variables["Belief"]
+
+        if prev_belief.prior_probs is None:
+            return
+        
+        print("Hypothesis propagation", prev_belief, belief)
+        for i, hyp in enumerate(prev_belief.possible_values):
+            prob = prev_belief.prior_probs[i]
+            if prob > 0.6: # A threshold for carry-on hypotheses
+                if hyp not in belief.possible_values and hyp != "NONE":
+                    belief.possible_values.append(hyp)
+                    enh_print(f"Carried belief hypothesis {hyp} with likelihood {prob}")
+
+        belief.prior_probs = np.ones((len(belief.possible_values)))
+        self.variables["Belief"] = belief
+        enh_print(f"Updated belief as {belief}")
 
     def reduce_obs_hypospace(self):
         all_node_results = []
@@ -429,6 +456,8 @@ class BayesianInferenceModel:
                 )
         self.rewrite_graph()
 
+        if "Belief" in self.variables and "Previous Belief" in self.variables:
+            self.hypo_propagation()
         left = []
         right = []
         for key, var in self.variables.items():
