@@ -18,6 +18,45 @@ except FileNotFoundError:
 except Exception as e:
     print(f"An error occurred: {e}")
 
+def replace_words(s):
+    replacements = [
+            ('refrigerator', 'fridge'),
+            ("first kitchen cabinet", "1st kitchencabinet"),
+            ("second kitchen cabinet", "2nd kitchencabinet"),
+            ("third kitchen cabinet", "3rd kitchencabinet"),
+            ("fourth kitchen cabinet", "4th kitchencabinet"),
+            ("fifth kitchen cabinet", "5th kitchencabinet"),
+            ("sixth kitchen cabinet", "6th kitchencabinet"),
+            ("seventh kitchen cabinet", "7th kitchencabinet"),
+            ("eighth kitchen cabinet", "8th kitchencabinet"),
+            ("first cabinet", "1st kitchencabinet"),
+            ("second cabinet", "2nd kitchencabinet"),
+            ("third cabinet", "3rd kitchencabinet"),
+            ("fourth cabinet", "4th kitchencabinet"),
+            ("fifth cabinet", "5th kitchencabinet"),
+            ("sixth cabinet", "6th kitchencabinet"),
+            ("seventh cabinet", "7th kitchencabinet"),
+            ("eighth cabinet", "8th kitchencabinet"),
+            ("kitchen table", "kitchentable"),
+            ("bathroom cabinet", "bathroomcabinet"),
+            ("condiment bottle", "condimentbottle"),
+            ("remote control", "remotecontrol"),
+            ("water glass", "waterglass"),
+            ("wine glass", "wineglass"),
+            ("walk towards", "walktowards"),
+            ("coffee table", "coffeetable"),
+            ("living room", "livingroom"),
+            ("kitchen cabinet", "kitchencabinet"),
+            ("dish bowl", "dishbowl")
+        ]
+    for old, new in replacements:
+        if isinstance(s, list):
+            for i, _ in enumerate(s):
+                s[i] = s[i].replace(new, old)
+        else:
+            s = s.replace(new, old)
+    return s
+
 records = []
 for d in data:
     timesteps = d["end_time"] + 1
@@ -46,13 +85,23 @@ for d in data:
             action = f"{agent_name} {action}"
         new_actions.append(action)
 
+    updated_states = []
+    for s in states:
+        s = replace_words(s)
+        updated_states.append(s)
+
+    updated_actions = []
+    for a in actions:
+        a = replace_words(a)
+        updated_actions.append(a)
+
     record = {
-        "story": story,
-        "question": question,
-        "answer_choices": choices,
-        "gt_answer": gt_answer,
-        "states": f"{states}",
-        "actions": f"{new_actions}"
+        "story": replace_words(story),
+        "question": replace_words(question),
+        "answer_choices": replace_words(choices),
+        "gt_answer": replace_words(gt_answer),
+        "states": f"{updated_states}",
+        "actions": f"{updated_actions}"
     }
 
     assert len(actions) == len(states)
