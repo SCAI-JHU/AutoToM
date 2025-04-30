@@ -89,6 +89,7 @@ def infer_last_timestamp(
     variable_values_with_time,
     all_probs,
     all_prob_estimations,
+    action_likelihood_goal
 ):
     # Last time stamp --> we want to infer the variable we are interested in with Bayesian Inference
     if isinstance(time_variables, list):
@@ -141,10 +142,27 @@ def infer_last_timestamp(
         self.back_inference,
         self.reduce_hypotheses,
     )
-        
-    enh_print(
-        f"After time {i}: {inf_name} Probs calculated as {var_i[inf_name].possible_values}, {results}"
-    )
+    if inf_var_name == "Goal":
+        action_likelihood_goal[i] = results
+        # print(results)
+        # print(inf_name, var_i[inf_name].possible_values)
+        accumulative_results = np.ones((len(var_i[inf_name].possible_values)))
+        accumulative_results /= accumulative_results.sum()
+        # print(accumulative_results, action_likelihood_goal)
+        for k, v in action_likelihood_goal.items():
+            accumulative_results *= np.array(v)
+            accumulative_results /= accumulative_results.sum()
+        enh_print(
+            f"After time {i}: {inf_name} Probs calculated as {var_i[inf_name].possible_values}, {accumulative_results}"
+        )
+        enh_print(
+            f"Goal probs at different time steps: {action_likelihood_goal}"
+        )
+        results = accumulative_results
+    else:
+        enh_print(
+            f"After time {i}: {inf_name} Probs calculated as {var_i[inf_name].possible_values}, {results}"
+        )
     chunk = "NONE"
     if variable_values_with_time is None:
         chunk = "NONE"
@@ -156,3 +174,78 @@ def infer_last_timestamp(
     }
     all_probs.append(now_probs)
     return results, all_prob_estimations, all_probs
+
+
+def infer_goal_at_timestamp(
+    self,
+    time_variables,
+    i,
+    previous_belief,
+    belief_name,
+    goal_name,
+    variable_values_with_time,
+    all_probs,
+    no_observation_hypothesis,
+    all_prob_estimations,
+):
+    # If we're inferring goal, we need to record P(Action | Goal, ...) at every timestep (we assume the agent has a consistent goal)
+    # Same with belief, we infer goal with Bayesian Inference. But notice that the compute (API calls / tokens) will not increase, because the likelihoods needed are already stored in the cache.
+
+    if isinstance(time_variables, list):
+        var_i = time_variables[i]
+    elif isinstance(time_variables, dict):  # variables at a specific timestep
+        var_i = time_variables
+    now_variables = []
+    for key, item in var_i.items():
+        if (
+            key != goal_name
+            and key != "All Actions"
+            and key != "Ground Truth State"
+        ):
+            now_variables.append(item)
+    if goal_name in var_i:
+        now_variables.append(var_i[goal_name])
+    if "BigToM" in self.dataset_name:
+        context = self.story
+    else:
+        context = ""
+    inference_model = BayesianInferenceModel(
+        variables=now_variables,
+        context=context,
+        llm=self.llm,
+        verbose=self.verbose,
+        inf_agent=self.inf_agent_name,
+        model_name=self.model_name,
+        episode_name=self.episode_name,
+        dataset_name=self.dataset_name,
+        K=self.K,
+        answer_choices=self.choices,
+        world_rules=self.world_rules,
+        all_prob_estimations=all_prob_estimations,
+        no_observation_hypothesis=no_observation_hypothesis,
+        reduce_hypotheses=self.reduce_hypotheses,
+    )
+
+    try:
+        results, all_prob_estimations, all_node_results = inference_model.infer("Goal", self.model_name, self.episode_name, self.init_belief)
+    except Exception as e:
+        print(f"Exception {e}")
+        return [1 for _ in range(len(var_i[goal_name].possible_values))], all_prob_estimations, all_probs
+    
+    self.translate_and_add_node_results(self, i, all_node_results)
+    # if self.verbose:
+    enh_print(
+        f"At time {i}: Goal Probs calculated as {var_i[goal_name].possible_values}, {results}"
+    )
+    chunk = "NONE"
+    if variable_values_with_time is None:
+        chunk = "NONE"
+    elif i < len(variable_values_with_time) and "Chunk" in variable_values_with_time[i]:
+        chunk = variable_values_with_time[i]["Chunk"]
+    now_probs = {
+        "Chunk": chunk,
+        f"Probs({self.choices})": results,
+    }
+    all_probs.append(now_probs)
+    return (results, all_prob_estimations, all_probs)
+    # return previous_belief, all_prob_estimations, all_probs

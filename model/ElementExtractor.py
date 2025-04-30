@@ -217,8 +217,8 @@ def hypothesis_generation(
         resp_list[j] = resp
     # print(resp_list)
     # print(res)
-    if verbose:
-        enh_print(f"Hypotheses proposed for {element_name}\n{resp_list}")
+    print(prompt)
+    enh_print(f"Hypotheses proposed for {element_name}\n{resp_list}")
     return resp_list
 
 
@@ -468,6 +468,8 @@ def mmtom_get_variables(
     preproposed_ob_hypos = []
     val_with_time = []
     for i in range(len(actions)):
+        if inf_agent_name not in actions[i]:
+            actions[i] = f"{inf_agent_name} {actions[i]}."
         vals = {
             f"{inf_agent_name}'s Action": actions[i],
             "State": states[i],
@@ -477,6 +479,16 @@ def mmtom_get_variables(
             "All Actions": [actions[i]],
         }
         val_with_time.append(vals)
+
+    # Propose quality hypotheses for observation and belief, conditioned on observable variables
+    for c in choices:
+        preproposed_ob_hypos += hypothesis_generation([], c + '; ' + val_with_time[-1][f"{inf_agent_name}'s Action"], 
+            now_story, inf_agent_name,"Observation",1,hypo_llm,
+        )
+    preproposed_ob_hypos += hypothesis_generation_no_observation(
+        choices, inf_agent_name, hypo_llm, True
+    )
+
     for i, vals in enumerate(val_with_time):
         var_dict = {}
         for var_type in variable_types:
@@ -515,15 +527,13 @@ def mmtom_get_variables(
                 )
             else:
 
-                if (
-                    var_type[1] == "Observation"
-                ):  # also change the way we propose hyp for belief
+                if var_type[1] == "Observation":
 
                     if len(preproposed_ob_hypos) == 0:
                         for c in choices:
                             preproposed_ob_hypos += hypothesis_generation(
                                 [],
-                                c,
+                                c + '; ' + vals[f"{inf_agent_name}'s Action"],
                                 now_story,
                                 character,
                                 var_type[1],
@@ -544,13 +554,12 @@ def mmtom_get_variables(
                     )
                     continue
                 else:
-                    hypo_c = []
+                    hypos = []
                     for c in choices:
-                        hypo_c += hypothesis_generation(
-                            [], c, now_story, character, var_type[1], K, hypo_llm
+                        hypos += hypothesis_generation(
+                            [], c + '; ' + vals[f"{inf_agent_name}'s Action"], now_story, character, var_type[1], K, hypo_llm
                         )
 
-                    hypos = hypo_c
                 var_dict[var_name] = Variable(
                     name=var_name,
                     in_model=True,
@@ -650,21 +659,20 @@ def mmtom_get_variables_at_time(
                 var_type[1] == "Observation"
             ):  # also change the way we propose hyp for belief
 
-                if len(preproposed_ob_hypos) == 0:
-                    for c in choices:
-                        preproposed_ob_hypos += hypothesis_generation(
-                            [],
-                            c,
-                            now_story,
-                            character,
-                            var_type[1],
-                            1,
-                            hypo_llm,
-                        )
-                    preproposed_ob_hypos += hypothesis_generation_no_observation(
-                        choices, character, hypo_llm, True
+                hypos = []
+                for c in choices:
+                    hypos += hypothesis_generation(
+                        [],
+                        c + '; ' + vals[f"{inf_agent_name}'s Action"],
+                        now_story,
+                        character,
+                        var_type[1],
+                        1,
+                        hypo_llm,
                     )
-                hypos = preproposed_ob_hypos
+                hypos += hypothesis_generation_no_observation(
+                    choices, character, hypo_llm, True
+                )
 
             elif var_type[1] == "Goal" and known_Goal != "NONE":
                 var_dict[var_name] = Variable(
@@ -675,13 +683,11 @@ def mmtom_get_variables_at_time(
                 )
                 continue
             else:
-                hypo_c = []
+                hypos = []
                 for c in choices:
-                    hypo_c += hypothesis_generation(
-                        [], c, now_story, character, var_type[1], K, hypo_llm
+                    hypos += hypothesis_generation(
+                        [], c + '; ' + vals[f"{inf_agent_name}'s Action"], now_story, character, var_type[1], K, hypo_llm
                     )
-
-                hypos = hypo_c
             var_dict[var_name] = Variable(
                 name=var_name,
                 in_model=True,
