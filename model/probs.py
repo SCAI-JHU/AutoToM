@@ -206,65 +206,13 @@ B) Unlikely."""
                     f"Encountering None values in prob_a!!\n\n{prompt}\n\n{response_dict}"
                 )
             return 0.1
-        if prob_a < 0.03:
-            prob_a = 0.03
-        if prob_a > 0.97:
-            prob_a = 1.0
+
         # clip the values
         if action_exponent is not None and "Action" in variable:
             return math.pow(prob_a, action_exponent)
         if verbose:
             print(prompt, "\n", prob_a)
         return prob_a
-    elif "Llama-3.1-8B" in model:
-        prob_a = llama_likelihood_request(prompt, model, max_tokens=200)
-        return prob_a
-
-
-def llama_likelihood_request(
-    prompt, model_id="meta-llama/Meta-Llama-3.1-8B-Instruct", max_tokens=200
-):
-    API_TOKEN = ""  # Put your API token here
-
-    pipeline = transformers.pipeline(
-        "text-generation",
-        model=model_id,
-        model_kwargs={"torch_dtype": torch.bfloat16},
-        device_map="auto",
-        token=API_TOKEN,
-    )
-
-    model = pipeline.model
-    tokenizer = pipeline.tokenizer
-
-    def compute_prob_of_string(inp, answer_tokens):
-        inputs = tokenizer.encode(inp, add_special_tokens=False)
-        inputs = torch.tensor([inputs], dtype=torch.long).to(model.device)
-        answer_tokens = tokenizer.encode(answer_tokens, add_special_tokens=False)
-        final_prob = 1.0
-        with torch.no_grad():
-            for token in answer_tokens:
-                outputs = model(input_ids=inputs)
-                logits = outputs.logits[0, -1, :]
-                probs = torch.softmax(logits, dim=-1)
-                probs = probs[token].item()
-                final_prob *= probs
-                next_input = torch.tensor([[token]], device=model.device)
-                inputs = torch.cat([inputs, next_input], dim=1)
-        return final_prob
-
-    prob_a_unnormalized = compute_prob_of_string(prompt, "A) Likely.")
-    prob_b_unnormalized = compute_prob_of_string(prompt, "B) Unlikely.")
-    denominator = prob_a_unnormalized + prob_b_unnormalized
-
-    if denominator <= 1e-12:
-        prob_a_normalized = 0.5
-    else:
-        prob_a_normalized = prob_a_unnormalized / denominator
-
-    print("No cost: using GPU with opensource LLM")
-    print(prompt, "\n", prob_a_normalized)
-    return prob_a_normalized
 
 
 def get_likelihood_test(prompt, verbose=True):
