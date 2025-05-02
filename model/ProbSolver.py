@@ -628,6 +628,18 @@ class ProblemSolver:
         results = None
         action_likelihood_goal = {}
 
+        all_actions = []
+        action_name = f"{self.inf_agent_name}'s Action"
+        for i in range(all_timesteps):
+            if action_name in time_variables[i]:
+                val = time_variables[i][action_name].possible_values[0]
+                if '.' not in val:
+                    all_actions.append(val + '.')
+                else:
+                    all_actions.append(val)
+
+        print(all_actions)
+
         if self.model_name == "automated":
             return self.solve_with_automated_model(
                 time_variables,
@@ -668,7 +680,8 @@ class ProblemSolver:
                                 variable_values_with_time=variable_values_with_time,
                                 all_probs=all_probs,
                                 all_prob_estimations=self.estimation_dictionary,
-                                action_likelihood_goal=action_likelihood_goal
+                                action_likelihood_goal=action_likelihood_goal,
+                                previous_actions=" ".join(all_actions[:i][-2:])
                             )
                         )
                         results = list(results)
@@ -690,7 +703,8 @@ class ProblemSolver:
                                     all_probs=all_probs,
                                     no_observation_hypothesis=no_observation_hypothesis,
                                     all_prob_estimations=self.estimation_dictionary,
-                                    goal_name=f"{self.inf_agent_name}'s Goal"
+                                    goal_name=f"{self.inf_agent_name}'s Goal",
+                                    previous_actions=" ".join(all_actions[:i][-2:])
                                 )
                             )
                         previous_belief, self.estimation_dictionary, all_probs = (
@@ -704,6 +718,7 @@ class ProblemSolver:
                                 all_probs=all_probs,
                                 no_observation_hypothesis=no_observation_hypothesis,
                                 all_prob_estimations=self.estimation_dictionary,
+                                previous_actions=" ".join(all_actions[:i][-2:])
                             )
                         )
             else:
@@ -747,7 +762,8 @@ class ProblemSolver:
                                     variable_values_with_time=variable_values_with_time,
                                     all_probs=all_probs,
                                     all_prob_estimations=self.estimation_dictionary,
-                                    action_likelihood_goal=action_likelihood_goal
+                                    action_likelihood_goal=action_likelihood_goal,
+                                    previous_actions=" ".join(all_actions[:i][-2:])
                                 )
                             )
 
@@ -788,7 +804,8 @@ class ProblemSolver:
                                         all_probs=all_probs,
                                         no_observation_hypothesis=no_observation_hypothesis,
                                         all_prob_estimations=self.estimation_dictionary,
-                                        goal_name=f"{self.inf_agent_name}'s Goal"
+                                        goal_name=f"{self.inf_agent_name}'s Goal",
+                                        previous_actions=" ".join(all_actions[:i][-2:])
                                     )
                                 )
                             previous_belief, self.estimation_dictionary, all_probs = (
@@ -802,6 +819,7 @@ class ProblemSolver:
                                     all_probs=all_probs,
                                     no_observation_hypothesis=no_observation_hypothesis,
                                     all_prob_estimations=self.estimation_dictionary,
+                                    previous_actions=" ".join(all_actions[:i][-2:])
                                 )
                             )
 
@@ -864,7 +882,7 @@ def main(args):
     costs = []
     apis = []
     for i, d in enumerate(data):
-        if i != 244:
+        if i < 300:
             continue
         print(f"Question {i}")
         states, actions, video_id = None, None, None
@@ -897,7 +915,7 @@ def main(args):
             model_name=model_name,
             episode_name=f"{dataset_name}_{i}",
             llm=llm,
-            verbose=True,
+            verbose=False,
             dataset_name=dataset_name,
             hypo_method=hypo_method,
             nested=nested,

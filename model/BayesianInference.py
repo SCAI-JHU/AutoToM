@@ -49,6 +49,7 @@ class BayesianInferenceModel:
         all_prob_estimations={},
         no_observation_hypothesis="NONE",
         reduce_hypotheses=False,
+        previous_actions=None
     ):
         self.model_name = model_name
         self.episode_name = episode_name
@@ -85,6 +86,7 @@ class BayesianInferenceModel:
         self.verbose = verbose
         self.no_observation_hypothesis = no_observation_hypothesis
         self.reduce_hypotheses = reduce_hypotheses
+        self.previous_actions = previous_actions
 
         # Check for "Observation" first; if not found, use "State" as the observation
         observation_var_name = next(
@@ -185,7 +187,12 @@ class BayesianInferenceModel:
                             continue
                     info_var.append(f"{parent}: {var_dict[parent]}")
                 else:
-                    info_var.append(f"{self.inf_agent}'s {parent}: {var_dict[parent]}")
+                    if parent == "Belief" and self.previous_actions:
+                        # Previous actions of the agents is a part of belief.
+                        cleaned_states = var_dict['State'].replace('\n', ' ')
+                        info_var.append(f"States: {cleaned_states}\n{self.inf_agent}'s {parent}: {var_dict[parent]}\n{self.inf_agent}'s previous actions: {self.previous_actions}")
+                    else:
+                        info_var.append(f"{self.inf_agent}'s {parent}: {var_dict[parent]}")
 
             info = "\n".join(info_var)
             key = info + ";" + var_dict[son]

@@ -12,10 +12,10 @@ def infer_belief_at_timestamp(
     all_probs,
     no_observation_hypothesis,
     all_prob_estimations,
+    previous_actions=None
 ):
     # For all time stamps except for the last --> we infer belief with Bayesian Inference
     # print(no_observation_hypothesis)
-
     if isinstance(time_variables, list):
         var_i = time_variables[i]
     elif isinstance(time_variables, dict):  # variables at a specific timestep
@@ -49,6 +49,7 @@ def infer_belief_at_timestamp(
         all_prob_estimations=all_prob_estimations,
         no_observation_hypothesis=no_observation_hypothesis,
         reduce_hypotheses=self.reduce_hypotheses,
+        previous_actions=previous_actions
     )
 
     try:
@@ -89,8 +90,11 @@ def infer_last_timestamp(
     variable_values_with_time,
     all_probs,
     all_prob_estimations,
-    action_likelihood_goal
+    action_likelihood_goal,
+    previous_actions=None
 ):
+    
+    print(previous_actions)
     # Last time stamp --> we want to infer the variable we are interested in with Bayesian Inference
     if isinstance(time_variables, list):
         var_i = time_variables[i]
@@ -130,6 +134,7 @@ def infer_last_timestamp(
         all_prob_estimations=all_prob_estimations,
         no_observation_hypothesis=no_observation_hypothesis,
         reduce_hypotheses=self.reduce_hypotheses,
+        previous_actions=previous_actions
     )
 
     results, all_prob_estimations, all_node_results = inference_model.infer(inf_var_name, self.model_name, self.episode_name, self.init_belief)
@@ -187,6 +192,7 @@ def infer_goal_at_timestamp(
     all_probs,
     no_observation_hypothesis,
     all_prob_estimations,
+    previous_actions=None
 ):
     # If we're inferring goal, we need to record P(Action | Goal, ...) at every timestep (we assume the agent has a consistent goal)
     # Same with belief, we infer goal with Bayesian Inference. But notice that the compute (API calls / tokens) will not increase, because the likelihoods needed are already stored in the cache.
@@ -224,6 +230,7 @@ def infer_goal_at_timestamp(
         all_prob_estimations=all_prob_estimations,
         no_observation_hypothesis=no_observation_hypothesis,
         reduce_hypotheses=self.reduce_hypotheses,
+        previous_actions=previous_actions
     )
 
     try:
