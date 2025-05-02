@@ -47,7 +47,13 @@ def replace_words(s):
             ("coffee table", "coffeetable"),
             ("living room", "livingroom"),
             ("kitchen cabinet", "kitchencabinet"),
-            ("dish bowl", "dishbowl")
+            ("dish bowl", "dishbowl"),
+            ("third", "3rd"),
+            ("second", "2nd"),
+            ("first", "1st"),
+            ("fourth", "4th"),
+            ("fifth", "5th"),
+            ("sixth", "6th")
         ]
     for old, new in replacements:
         if isinstance(s, list):
@@ -85,15 +91,21 @@ for d in data:
             action = f"{agent_name} {action}"
         new_actions.append(action)
 
-    updated_states = []
-    for s in states:
-        s = replace_words(s)
-        updated_states.append(s)
-
     updated_actions = []
-    for a in actions:
+    diff_action_idx = []
+    for j, a in enumerate(actions):
+        if j < len(actions) - 1 and actions[j] == actions[j + 1]:
+            continue
+        diff_action_idx.append(j)
         a = replace_words(a)
         updated_actions.append(a)
+
+    updated_states = []
+    for j, s in enumerate(states):
+        if j not in diff_action_idx:
+            continue
+        s = replace_words(s)
+        updated_states.append(s)
 
     record = {
         "story": replace_words(story),

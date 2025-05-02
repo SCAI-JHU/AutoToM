@@ -1,0 +1,6 @@
+Please determine if the two sentences below contradict each other or not.
+[Sentence1]
+[Sentence2]
+A) Contradictory
+B) Not Contradictory
+Respond with a single letter without explanation.

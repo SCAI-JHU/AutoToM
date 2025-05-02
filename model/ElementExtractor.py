@@ -356,6 +356,19 @@ def verify_variable(infer_variable, sentence):
     resp, cost = llm_request(prompt, temperature=0.0, model="gpt-4o")
     return resp
 
+def verify_hypo(gt_hypo, gen_hypo):
+    with open(
+        f"prompts/prompts_gpt-4o/verify_hypo.txt", "r", encoding="utf-8"
+    ) as prompt_file:
+        prompt_template = prompt_file.read().strip()
+    prompt = prompt_template.replace("[Sentence1]", f"{gt_hypo}")
+    prompt = prompt.replace("[Sentence2]", f"{gen_hypo}")
+    resp, cost = llm_request(prompt, temperature=0.0, model="gpt-4o")
+    # enh_print(prompt + resp)
+    if "A" in resp[:3]:
+        return gt_hypo
+    else:
+        return gt_hypo + ' ' + gen_hypo
 
 def get_inf_var(question, choices, model, llm, dataset_name):
     if "belief_of_goal" in dataset_name:
@@ -519,12 +532,29 @@ def mmtom_get_variables(
                 continue
 
             if vals[var_name] != "NONE":
-                var_dict[var_name] = Variable(
-                    name=var_name,
-                    in_model=True,
-                    is_observed=True,
-                    possible_values=[vals[var_name]],
-                )
+                if "Belief" not in var_name:
+                    hypos = [vals[var_name]]
+                    var_dict[var_name] = Variable(
+                        name=var_name,
+                        in_model=True,
+                        is_observed=True,
+                        possible_values=hypos,
+                    )
+                else:
+                    # Because a given belief hypotheses is definitely not covering the whole belief set of the agent
+                    hypos = []
+                    for c in choices:
+                        gen_hypo = hypothesis_generation(
+                            [], c + '; ' + vals[f"{inf_agent_name}'s Action"], now_story, character, var_type[1], K, hypo_llm
+                        )[0]
+                        hypos.append(verify_hypo(vals[var_name], gen_hypo))
+                            
+                    var_dict[var_name] = Variable(
+                        name=var_name,
+                        in_model=True,
+                        is_observed=False,
+                        possible_values=hypos,
+                    )
             else:
 
                 if var_type[1] == "Observation":
