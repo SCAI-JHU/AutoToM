@@ -202,8 +202,8 @@ class InteractiveTimeSeriesPlot:
         self.time_step_label1 = tk.Text(
             self.timesteps_frame,
             wrap="word",
-            height=5,
-            font=("Arial", 16),
+            height=15,
+            font=("Arial", 14),
             bd=0,
             padx=10,
             pady=5,
@@ -609,13 +609,13 @@ def create_interactive_plot(
 
 # Example usage
 if __name__ == "__main__":
-    model = "sobag"
+    model = "sob"
     # model = "automated"
     # dataset = "MMToM-QA"
     # episode = "300"
-    dataset = "BigToM_bbfb"
-    episode = "6"
-    direction = "1"
+    dataset = "ToMi-1st"
+    episode = "12"
+    direction = "0"
     larger_path = "../"
 
     data = load_full_dataset(dataset)
@@ -645,7 +645,7 @@ if __name__ == "__main__":
     choices = eval(columns[1].split("(")[1].split(")")[0])
 
     with open(
-        f"{larger_path}results/node_results/{model}_{dataset}_{episode}_back1_reduce1.csv",
+        f"{larger_path}results/node_results/{model}_{dataset}_{episode}_back0_reduce1.csv",
         mode="r",
     ) as file:
         reader = csv.reader(file)
@@ -723,7 +723,7 @@ if __name__ == "__main__":
             curr_max_hyp = choices[1]
             curr_max_prob = hyp_b[i]
         df_node = pd.read_csv(
-            f"{larger_path}results/node_results/{model}_{dataset}_{episode}_back1_reduce1.csv"
+            f"{larger_path}results/node_results/{model}_{dataset}_{episode}_back0_reduce1.csv"
         )
         df_node = df_node[df_node["Time"] == i]
         node_info = ""
@@ -738,7 +738,7 @@ if __name__ == "__main__":
 
         if str(i) in NLDs:
             # print(NLDs[str(i)][0])
-            node_info += f"One of the most salient joint probability is {NLDs[str(i)][0][0][1]}, this is because "
+            node_info += f"One of the most salient joint probability is {round(NLDs[str(i)][0][0][1], 3)}, this is because "
             converted_str = ""
             for n in NLDs[str(i)][0][0][0].split("\n"):
                 if "Prior" in n:
@@ -757,7 +757,7 @@ if __name__ == "__main__":
                     converted_str += f"•{n}\n"
 
             natural_lang = natural_lang_translation(NLDs[str(i)][0][0][0])
-            node_info += natural_lang + "\n"
+            node_info += f"{natural_lang} \n"
             node_info += f"Values and hypotheses used in calculation:\n{converted_str}"
             node_info += "---------- \n"
 
@@ -790,6 +790,24 @@ if __name__ == "__main__":
                                 .replace('"]', "")
                             )
                             values[a] = a_val
+            if "ToMi" in dataset:
+                df_sub_node = df_node[
+                    df_node["Node"].str.contains(f"Belief_{i}_{c}", na=False)
+                    | df_node["Parent node"].str.contains(f"Belief_{i}_{c}", na=False)
+                    | df_node["Parent node"].str.contains(f"State_{i}_1", na=False)
+                ]
+                for index, row in df_sub_node.iterrows():
+                    # likelihood = f'P({row["Node"]} | {row["Parent node"]}) = P({row["Node value"]} | {row["Parent node value"]}) = {round(row["Likelihood"], 3)} \n'
+                    cond_val = (
+                        row["Parent node"]
+                        .replace('["', "")
+                        .replace('"]', "")
+                        .replace("['", "")
+                        .replace("']", "")
+                        .replace("', '", ", ")
+                    )
+                    likelihood = f'•P({row["Node"]} | {cond_val}) = {round(row["Likelihood"], 3)} \n'
+                    node_info += likelihood
 
             if "BigToM_bbfb" in dataset or "BigToM_bbtb" in dataset:
                 df_sub_node = df_node[
@@ -911,7 +929,7 @@ if __name__ == "__main__":
         normalization_constant += local_cond
 
         with open(
-            f"{larger_path}results/metrics/{model}_{dataset}_{episode}_back1_reduce1_metrics.json",
+            f"{larger_path}results/metrics/{model}_{dataset}_{episode}_back0_reduce1_metrics.json",
             "r",
         ) as f:
             metrics_data = json.load(f)
