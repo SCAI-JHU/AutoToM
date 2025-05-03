@@ -580,14 +580,14 @@ def create_interactive_plot(
 
 # Example usage
 if __name__ == "__main__":
-    # model = "sobag"
-    model = "automated"
-    # dataset = "MMToM-QA"
-    # episode = "8"
-    dataset = "BigToM_bbfb"
-    episode = "6"
-    direction = "0"
-    larger_path = "/Users/mungyaojia/Desktop/autotom_final/AutoToM/"
+    model = "sobag"
+    # model = "automated"
+    dataset = "MMToM-QA"
+    episode = "300"
+    # dataset = "BigToM_bbfb"
+    # episode = "6"
+    direction = "1"
+    larger_path = "../"
 
     data = load_full_dataset(dataset)
     d = data[int(episode)]
@@ -614,6 +614,7 @@ if __name__ == "__main__":
         chunks_probs = [(rows[0], rows[1]) for rows in reader]
 
     choices = eval(columns[1].split("(")[1].split(")")[0])
+
 
     with open(
         f"{larger_path}results/node_results/{model}_{dataset}_{episode}_back1_reduce1.csv",
@@ -644,10 +645,14 @@ if __name__ == "__main__":
             # f"{larger_path}results/probs/{model}_{dataset}_{episode}.csv"
             f"{larger_path}results/probs/{model}_{dataset}_{episode}.csv"
         )
-        for index, row in df_probs.iterrows():
+        for index, row in df_probs.iloc[::-1].iterrows():
+            print(index, row)
+            val = row[df_probs.columns[1]]
+            if ',' not in val:
+                val = val.replace(' ', ',')
             prob_a, prob_b = (
-                eval(row[df_probs.columns[1]])[0],
-                eval(row[df_probs.columns[1]])[1],
+                eval(val)[0],
+                eval(val)[1],
             )
             hyp_a[counter] = prob_a
             hyp_b[counter] = prob_b
@@ -669,6 +674,11 @@ if __name__ == "__main__":
             hyp_b[counter] = prob_b
             counter += 1
 
+
+    with open(f"{larger_path}results/parsed_result/{model}_{dataset}_{episode}.json") as f:
+        parsed_result = json.load(f)
+    with open(f"{larger_path}results/NLD_descriptions/{model}_{dataset}_{episode}.json") as f:
+        NLDs = json.load(f)
     # Example text for each time point (event detail, LaTeX formula)
     details_text = []
     for i in range(total_num_steps):
@@ -696,19 +706,23 @@ if __name__ == "__main__":
         action_liks = list(df_node_action["Likelihood"])
 
         for c in range(1, len(choices) + 1):
-            if True:  # "BigToM_bbfb" in dataset or "BigToM_bbtb" in dataset: TODO: fix
+            if True: 
                 local_cond = 1
-                node_info += f"Belief Hypothesis {c}: {choices[c-1]} \n"
-
-                df_sub_node = df_node[
-                    df_node["Node"].str.contains(f"Belief_{i}_{c}", na=False)
-                    | df_node["Parent node"].str.contains(f"Belief_{i}_{c}", na=False)
-                ]
-                for index, row in df_sub_node.iterrows():
-                    likelihood = f'P({row["Node"]} | {row["Parent node"]}) = P({row["Node value"]} | {row["Parent node value"]}) = {round(row["Likelihood"], 3)} \n'
-                    if likelihood not in node_info:
-                        node_info += likelihood
-                    local_cond *= row["Likelihood"]
+                node_info += f"{parsed_result['inf_var_name']} Hypothesis {c}: {choices[c-1]} \n"
+                if str(i) in NLDs:
+                    # print(NLDs[str(i)][0])
+                    node_info += f"One of the most salient joint probability is {NLDs[str(i)][0][0][1]}, calculated using these values and hypotheses:\n"
+                    node_info += NLDs[str(i)][0][0][0]
+                # df_sub_node = df_node[
+                #     df_node["Node"].str.contains(f"Belief_{i}_{c}", na=False)
+                #     | df_node["Parent node"].str.contains(f"Belief_{i}_{c}", na=False)
+                # ]
+                # for index, row in df_sub_node.iterrows():
+                #     likelihood = f'P({row["Node"]}={row["Node value"]} | {row["Parent node"]}={row["Parent node value"]}) = {round(row["Likelihood"], 3)} \n'
+                #     print(likelihood)
+                #     if likelihood not in node_info:
+                #         node_info += likelihood
+                #     local_cond *= row["Likelihood"]
 
             if (
                 "BigToM_bbfb" in dataset or "BigToM_bbtb" in dataset
@@ -819,14 +833,28 @@ if __name__ == "__main__":
         ) as f:
             metrics_data = json.load(f)
 
-        assigned_models = metrics_data["Model Record"][f"Question {episode}"][
-            "Assigned models"
-        ]
+        if "Model Record" in metrics_data:
+            assigned_models = metrics_data["Model Record"][f"Question {episode}"][
+                "Assigned models"
+            ]
+        else:
+            assigned_models = []
+            for x in model:
+                if x == "s":
+                    assigned_models.append("State")
+                if x == "a":
+                    assigned_models.append("Action")
+                if x == "b":
+                    assigned_models.append("Belief")
+                if x == "o":
+                    assigned_models.append("Observation")
+                if x == "g":
+                    assigned_models.append("Goal")
 
         if "MMToM" not in dataset:
             left = f'At time step {i}, {list(df_middle["Chunk"])[i]}\n\nThe proposed model is {assigned_models[str(i)]}\n\n•P({choices[0]}) = {round(hyp_a[i], 3)} \n•P({choices[1]}) = {round(hyp_b[i], 3)} '
         else:
-            left = f"At time step {i}, {states[i]} \n•P({choices[0]}) = {round(hyp_a[i], 3)} \n•P({choices[1]}) = {round(hyp_b[i], 3)} "
+            left = f"At time step {i}, {states[i]} \nThe proposed model is {assigned_models}\n\n•P({choices[0]}) = {round(hyp_a[i], 3)} \n•P({choices[1]}) = {round(hyp_b[i], 3)} \nThe extracted variables are: {NLDs[str(i)][1] if str(i) in NLDs else 'Not Inferred'} "
         right_text = (
             f"{node_info}"
             # f"$\\mathcal{{L}}_{{t={i}}}=\\frac{{1}}{{N}}\\sum(y_i-\\hat{{y}}_i)^2$"
