@@ -98,6 +98,7 @@ class ProblemSolver:
         self.prev_hyp = prev_hyp
         self.estimation_dictionary = {}
         self.translate_id_recorder = {}
+        self.NLD_descriptions = {}
         self.start_time = time.time()
         self.middle_result_time = self.start_time
         self.no_model_adjustment = no_model_adjustment
@@ -140,6 +141,7 @@ class ProblemSolver:
         self.translate_and_add_node_results = (
             NodeResultTracker.translate_and_add_node_results
         )
+        self.save_NLD_descriptions = NodeResultTracker.save_NLD_descriptions
         self.infer_last_timestamp = TimestepInference.infer_last_timestamp
         self.infer_belief_at_timestamp = TimestepInference.infer_belief_at_timestamp
         self.infer_goal_at_timestamp = TimestepInference.infer_goal_at_timestamp
@@ -477,6 +479,7 @@ class ProblemSolver:
         no_observation_hypothesis,
         variable_values_with_time,
         all_probs,
+        action_likelihood_goal
     ):
 
         preproposed_ob_hypos = []
@@ -564,6 +567,7 @@ class ProblemSolver:
                     saved_model_variables,
                     self.no_model_adjustment,
                     self,
+                    action_likelihood_goal
                 )
             )
             if terminate:
@@ -647,6 +651,7 @@ class ProblemSolver:
                 no_observation_hypothesis,
                 variable_values_with_time,
                 all_probs,
+                action_likelihood_goal
             )
 
         else:

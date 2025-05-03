@@ -174,6 +174,7 @@ class BayesianInferenceModel:
         prob = 1.0
         individual_likelihoods = {}
         node_results_tracker = []
+        NLD = ""
 
         for son, parents in calc:
             info_var = []
@@ -190,7 +191,7 @@ class BayesianInferenceModel:
                     if parent == "Belief" and self.previous_actions:
                         # Previous actions of the agents is a part of belief.
                         cleaned_states = var_dict['State'].replace('\n', ' ')
-                        info_var.append(f"States: {cleaned_states}\n{self.inf_agent}'s {parent}: {var_dict[parent]}\n{self.inf_agent}'s previous actions: {self.previous_actions}")
+                        info_var.append(f"{self.inf_agent}'s Previous Actions: {self.previous_actions}\n{self.inf_agent}'s {parent}: {var_dict[parent]}")
                     else:
                         info_var.append(f"{self.inf_agent}'s {parent}: {var_dict[parent]}")
 
@@ -201,13 +202,12 @@ class BayesianInferenceModel:
             if son == "Utterance":
                 key = "Utterance:" + key
 
-            if self.no_observation_hypothesis in key and son == "Belief":
+            if self.no_observation_hypothesis in key and son == "Belief" and "Previous Belief" in var_dict:
                 # in this case, belief == previous belief -> 1.0; belief != previous belief -> 0.03
-                if "Previous Belief" in var_dict:
-                    if var_dict["Previous Belief"] == var_dict["Belief"]:
-                        logits = 1.0
-                    else:
-                        logits = 0.03
+                if var_dict["Previous Belief"] == var_dict["Belief"]:
+                    logits = 1.0
+                else:
+                    logits = 0.03
             # No utterance, do not calculate
             elif "Utterance" in son and var_dict[son] == "NONE":
                 logits = 0.03
@@ -246,10 +246,11 @@ class BayesianInferenceModel:
 
             node_results_tracker.append((son, parents, copy(var_dict), logits))
             individual_likelihoods[(son, tuple(parents), var_dict[son])] = logits
-
+            
+            NLD += f'P({son}="{var_dict[son]}"|{"; ".join([form_NLD(p, var_dict[p]) for p in parents])})={logits})\n'
             prob *= logits
 
-        return prob, individual_likelihoods, node_results_tracker
+        return prob, individual_likelihoods, node_results_tracker, NLD
 
     def hypo_propagation(self):
         prev_belief = self.variables["Previous Belief"]
@@ -279,7 +280,7 @@ class BayesianInferenceModel:
         po = []
         for o in obs_hypos:
             var_dict["Observation"] = o
-            p, ind_lh, node_result = self.calculate_prob_product(
+            p, ind_lh, node_result, _ = self.calculate_prob_product(
                 var_dict, [("Observation", ["State"])]
             )
             all_node_results.extend(node_result)
@@ -335,12 +336,12 @@ class BayesianInferenceModel:
                 var_dict["Goal"] = self.variables["Goal"].possible_values[0]
             else:
                 parents = ["Belief"]
-            p, ind_lh, node_result = self.calculate_prob_product(
+            p, ind_lh, node_result, _ = self.calculate_prob_product(
                 var_dict, [("Action", parents)]
             )
             all_node_results.extend(node_result)
             pa.append(p)
-            p, ind_lh, node_result = self.calculate_prob_product(
+            p, ind_lh, node_result, _ = self.calculate_prob_product(
                 var_dict, [("Utterance", parents)]
             )
             all_node_results.extend(node_result)
@@ -524,25 +525,31 @@ class BayesianInferenceModel:
             return
 
         probs = []
+        all_NLDs = {"variables": self.variables}
 
         for infer_var_hypo in infer_var.possible_values:
             prob_sum = 0.0
             var_dict[infer_var_name] = infer_var_hypo
 
             for comb in combo:
-
+                
+                NLD = "" # A natural language description of the joint probability
                 prior_prob = 1.0
                 for i, (val, prob) in enumerate(comb):
                     var_dict[left[i]] = val
                     prior_prob *= prob
+                    if prob != 1.0:
+                        NLD += f'Prior: P({left[i]}="{val}")={prob}; '
 
-                logits, individual_likelihoods, node_result = (
+                logits, individual_likelihoods, node_result, NLD_calc = (
                     self.calculate_prob_product(var_dict, calc)
                 )
+                NLD += NLD_calc
 
                 all_node_results.extend(node_result)
 
                 prob_contribution = logits * prior_prob
+                all_NLDs[NLD] = prob_contribution
                 prob_sum += prob_contribution
             probs.append(prob_sum)
 
@@ -553,4 +560,5 @@ class BayesianInferenceModel:
             probs,
             self.recorder,
             all_node_results,
+            all_NLDs
         )

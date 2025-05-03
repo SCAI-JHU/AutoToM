@@ -53,11 +53,11 @@ def infer_belief_at_timestamp(
     )
 
     try:
-        results, all_prob_estimations, all_node_results = inference_model.infer("Belief", self.model_name, self.episode_name, self.init_belief)
+        results, all_prob_estimations, all_node_results, all_NLDs = inference_model.infer("Belief", self.model_name, self.episode_name, self.init_belief)
     except Exception as e:
         print(f"Exception {e}")
         return (Variable("Previous Belief", True, False, ["NONE"], np.ones(1)), all_prob_estimations, all_probs)
-    
+    self.save_NLD_descriptions(self, i, all_NLDs)
     self.translate_and_add_node_results(self, i, all_node_results)
     previous_belief = deepcopy(var_i[belief_name])
     previous_belief.prior_probs = np.array(results)
@@ -71,11 +71,12 @@ def infer_belief_at_timestamp(
         chunk = "NONE"
     elif i < len(variable_values_with_time) and "Chunk" in variable_values_with_time[i]:
         chunk = variable_values_with_time[i]["Chunk"]
-    now_probs = {
-        "Chunk": chunk,
-        f"Probs({self.choices})": results,
-    }
-    all_probs.append(now_probs)
+    if "Belief" in self.inf_var_name:
+        now_probs = {
+            "Chunk": chunk,
+            f"Probs({self.choices})": results,
+        }
+        all_probs.append(now_probs)
     return (previous_belief, all_prob_estimations, all_probs)
     # return previous_belief, all_prob_estimations, all_probs
 
@@ -137,9 +138,9 @@ def infer_last_timestamp(
         previous_actions=previous_actions
     )
 
-    results, all_prob_estimations, all_node_results = inference_model.infer(inf_var_name, self.model_name, self.episode_name, self.init_belief)
+    results, all_prob_estimations, all_node_results, all_NLDs = inference_model.infer(inf_var_name, self.model_name, self.episode_name, self.init_belief)
     self.translate_and_add_node_results(self, i, all_node_results)
-    
+    self.save_NLD_descriptions(self, i, all_NLDs)
     save_node_results(
         self.intermediate_node_results,
         self.model_name,
@@ -234,11 +235,11 @@ def infer_goal_at_timestamp(
     )
 
     try:
-        results, all_prob_estimations, all_node_results = inference_model.infer("Goal", self.model_name, self.episode_name, self.init_belief)
+        results, all_prob_estimations, all_node_results, all_NLDs = inference_model.infer("Goal", self.model_name, self.episode_name, self.init_belief)
     except Exception as e:
         print(f"Exception {e}")
         return [1 for _ in range(len(var_i[goal_name].possible_values))], all_prob_estimations, all_probs
-    
+    self.save_NLD_descriptions(self, i, all_NLDs)
     self.translate_and_add_node_results(self, i, all_node_results)
     # if self.verbose:
     enh_print(
@@ -249,6 +250,7 @@ def infer_goal_at_timestamp(
         chunk = "NONE"
     elif i < len(variable_values_with_time) and "Chunk" in variable_values_with_time[i]:
         chunk = variable_values_with_time[i]["Chunk"]
+
     now_probs = {
         "Chunk": chunk,
         f"Probs({self.choices})": results,

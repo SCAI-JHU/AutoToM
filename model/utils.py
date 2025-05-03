@@ -14,6 +14,13 @@ import torch
 import time
 import glob
 
+def form_NLD(p, val):
+    if "State" in p:
+        return "State"
+    if "Action" in p:
+        return p
+    mark = '"'
+    return p+"="+mark+val+mark
 
 def get_info(s, num=0):
     i = num
