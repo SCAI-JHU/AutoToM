@@ -16,6 +16,7 @@ import csv
 import pandas as pd
 from DataLoader import *
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
+from utils import *
 
 
 class InteractiveTimeSeriesPlot:
@@ -26,6 +27,7 @@ class InteractiveTimeSeriesPlot:
         data1: np.ndarray,
         data2: np.ndarray,
         details_text: list,  # List of tuples (event_detail, latex_formula)
+        chunks,
         series1_name: str = "Series 1",
         series2_name: str = "Series 2",
         title: str = "",
@@ -39,6 +41,7 @@ class InteractiveTimeSeriesPlot:
         self.data1 = data1
         self.data2 = data2
         self.details_text = details_text
+        self.chunks = chunks
         self.current_index = None
         self.story_question = story_question
 
@@ -183,18 +186,32 @@ class InteractiveTimeSeriesPlot:
             )
             btn.pack(side=tk.LEFT, padx=2)
 
-        self.time_step_label1 = ttk.Label(
-            self.timesteps_frame,
-            text=self.story_question,
-            font=(
-                "Arial",
-                20,
-            ),
-            # wraplength=1400,
-        )
-        self.time_step_label1.pack(anchor="w", padx=(10, 5), pady=(5, 0))
+        # self.time_step_label1 = ttk.Label(
+        #     self.timesteps_frame,
+        #     text=self.story_question,
+        #     font=(
+        #         "Arial",
+        #         20,
+        #     ),
+        #     # wraplength=1400,
+        # )
+        # self.time_step_label1.pack(anchor="w", padx=(10, 5), pady=(5, 0))
         self._make_wrap_follow_width(self.time_step_label)
-        self._make_wrap_follow_width(self.time_step_label1)
+        # self._make_wrap_follow_width(self.time_step_label1)
+
+        self.time_step_label1 = tk.Text(
+            self.timesteps_frame,
+            wrap="word",
+            height=15,
+            font=("Arial", 14),
+            bd=0,
+            padx=10,
+            pady=5,
+        )
+        self.time_step_label1.insert("1.0", self.story_question)
+        self.time_step_label1.configure(state="disabled")
+        self.time_step_label1.tag_configure("highlight", background="yellow")
+        self.time_step_label1.pack(fill="x", padx=(10, 5), pady=(5, 0))
 
         # Add a thick separator after time steps
         sep = ttk.Separator(self.bottom_frame, orient="horizontal", style="TSeparator")
@@ -259,7 +276,7 @@ class InteractiveTimeSeriesPlot:
             justify="center",
         )
         self.event_text.pack(fill=tk.BOTH, expand=True, pady=10)
-        self._make_wrap_follow_width(self.event_text)
+        # self._make_wrap_follow_width(self.event_text)
 
         # === Salient Likelihood Term Section ===
         self.latex_container_frame = ttk.Frame(self.details_paned)
@@ -272,9 +289,10 @@ class InteractiveTimeSeriesPlot:
             self.latex_container,
             text="Salient Likelihood Term",
             font=("Arial", 20, "bold"),
+            wraplength=500,
         )
         self.latex_title.pack(anchor="w", padx=5, pady=5)
-        self._make_wrap_follow_width(self.latex_title)
+        # self._make_wrap_follow_width(self.latex_title)
 
         # Create canvas and scrollbar for latex details
         self.latex_canvas = tk.Canvas(self.latex_container)
@@ -503,7 +521,7 @@ class InteractiveTimeSeriesPlot:
                         self.latex_content,
                         text=obj,
                         font=("Arial", 20),
-                        # wraplength=1000,
+                        wraplength=2000,
                         justify="left",
                     )
                 lbl.pack(fill=tk.BOTH, expand=True, pady=4)
@@ -519,8 +537,17 @@ class InteractiveTimeSeriesPlot:
 
     def show_details(self, index):
         left, right_payload = self.details_text[index]
+        chunk = self.chunks[index]
         self.event_text.configure(text=left)
         self._show_mixed(right_payload)
+
+        self.time_step_label1.configure(state="normal")
+        self.time_step_label1.tag_remove("highlight", "1.0", tk.END)
+        pos = self.time_step_label1.search(chunk, "1.0", tk.END)
+        if pos:
+            end = f"{pos}+{len(chunk)}c"
+            self.time_step_label1.tag_add("highlight", pos, end)
+        self.time_step_label1.configure(state="disabled")
 
         for h in self.highlighting:
             try:
@@ -556,6 +583,7 @@ def create_interactive_plot(
     data1: np.ndarray,
     data2: np.ndarray,
     details_text: list,
+    chunks,
     series1_name: str = "Series 1",
     series2_name: str = "Series 2",
     title: str = "Time Series Plot",
@@ -570,6 +598,7 @@ def create_interactive_plot(
         data1,
         data2,
         details_text,
+        chunks,
         series1_name,
         series2_name,
         title,
@@ -580,13 +609,13 @@ def create_interactive_plot(
 
 # Example usage
 if __name__ == "__main__":
-    model = "sobag"
+    model = "sob"
     # model = "automated"
-    dataset = "MMToM-QA"
-    episode = "300"
-    # dataset = "BigToM_bbfb"
-    # episode = "6"
-    direction = "1"
+    # dataset = "MMToM-QA"
+    # episode = "300"
+    dataset = "ToMi-1st"
+    episode = "12"
+    direction = "0"
     larger_path = "../"
 
     data = load_full_dataset(dataset)
@@ -615,9 +644,8 @@ if __name__ == "__main__":
 
     choices = eval(columns[1].split("(")[1].split(")")[0])
 
-
     with open(
-        f"{larger_path}results/node_results/{model}_{dataset}_{episode}_back1_reduce1.csv",
+        f"{larger_path}results/node_results/{model}_{dataset}_{episode}_back0_reduce1.csv",
         mode="r",
     ) as file:
         reader = csv.reader(file)
@@ -648,8 +676,8 @@ if __name__ == "__main__":
         for index, row in df_probs.iloc[::-1].iterrows():
             print(index, row)
             val = row[df_probs.columns[1]]
-            if ',' not in val:
-                val = val.replace(' ', ',')
+            if "," not in val:
+                val = val.replace(" ", ",")
             prob_a, prob_b = (
                 eval(val)[0],
                 eval(val)[1],
@@ -674,10 +702,13 @@ if __name__ == "__main__":
             hyp_b[counter] = prob_b
             counter += 1
 
-
-    with open(f"{larger_path}results/parsed_result/{model}_{dataset}_{episode}.json") as f:
+    with open(
+        f"{larger_path}results/parsed_result/{model}_{dataset}_{episode}.json"
+    ) as f:
         parsed_result = json.load(f)
-    with open(f"{larger_path}results/NLD_descriptions/{model}_{dataset}_{episode}.json") as f:
+    with open(
+        f"{larger_path}results/NLD_descriptions/{model}_{dataset}_{episode}.json"
+    ) as f:
         NLDs = json.load(f)
     # Example text for each time point (event detail, LaTeX formula)
     details_text = []
@@ -692,7 +723,7 @@ if __name__ == "__main__":
             curr_max_hyp = choices[1]
             curr_max_prob = hyp_b[i]
         df_node = pd.read_csv(
-            f"{larger_path}results/node_results/{model}_{dataset}_{episode}_back1_reduce1.csv"
+            f"{larger_path}results/node_results/{model}_{dataset}_{episode}_back0_reduce1.csv"
         )
         df_node = df_node[df_node["Time"] == i]
         node_info = ""
@@ -705,28 +736,98 @@ if __name__ == "__main__":
         df_node_action = df_node_action.sort_values("Node", ascending=True)
         action_liks = list(df_node_action["Likelihood"])
 
-        for c in range(1, len(choices) + 1):
-            if True: 
-                local_cond = 1
-                node_info += f"{parsed_result['inf_var_name']} Hypothesis {c}: {choices[c-1]} \n"
-                if str(i) in NLDs:
-                    # print(NLDs[str(i)][0])
-                    node_info += f"One of the most salient joint probability is {NLDs[str(i)][0][0][1]}, calculated using these values and hypotheses:\n"
-                    node_info += NLDs[str(i)][0][0][0]
-                # df_sub_node = df_node[
-                #     df_node["Node"].str.contains(f"Belief_{i}_{c}", na=False)
-                #     | df_node["Parent node"].str.contains(f"Belief_{i}_{c}", na=False)
-                # ]
-                # for index, row in df_sub_node.iterrows():
-                #     likelihood = f'P({row["Node"]}={row["Node value"]} | {row["Parent node"]}={row["Parent node value"]}) = {round(row["Likelihood"], 3)} \n'
-                #     print(likelihood)
-                #     if likelihood not in node_info:
-                #         node_info += likelihood
-                #     local_cond *= row["Likelihood"]
+        if str(i) in NLDs:
+            # print(NLDs[str(i)][0])
+            node_info += f"One of the most salient joint probability is {round(NLDs[str(i)][0][0][1], 3)}, this is because "
+            converted_str = ""
+            for n in NLDs[str(i)][0][0][0].split("\n"):
+                if "Prior" in n:
+                    n = n.split("; P")
 
-            if (
-                "BigToM_bbfb" in dataset or "BigToM_bbtb" in dataset
-            ):  # TODO: fix the joint probability calculations
+                    converted_str += f"•{n[0]}\n"
+                    if n[1].endswith(")"):
+                        n[1] = n[1][:-1]
+                    converted_str += f"•P{n[1]}\n"
+
+                else:
+                    if n == "" or n == " ":
+                        continue
+                    if n.endswith(")"):
+                        n = n[:-1]
+                    converted_str += f"•{n}\n"
+
+            natural_lang = natural_lang_translation(NLDs[str(i)][0][0][0])
+            node_info += f"{natural_lang} \n"
+            node_info += f"Values and hypotheses used in calculation:\n{converted_str}"
+            node_info += "---------- \n"
+
+        values = {}
+        for c in range(1, len(choices) + 1):
+
+            if True:
+                local_cond = 1
+                node_info += (
+                    f"{parsed_result['inf_var_name']} Hypothesis {c}: {choices[c-1]} \n"
+                )
+                df_sub_node = df_node[df_node["Time"] == i]
+                unique_nodes = []
+                for index, row in df_sub_node.iterrows():
+                    unique_nodes.append(eval(row["Parent node"]))
+                    for col in ["Parent node", "Node"]:
+                        if "," in f"{row[col]}":
+                            a, b = eval(f"{row[col]}")
+                            a_val, b_val = eval(f'{row[f"{col} value"]}')
+                            values[a] = a_val
+                            values[b] = b_val
+                        else:
+                            a = f"{row[col]}"
+                            a_val = f'{row[f"{col} value"]}'
+                            a = a.replace("['", "").replace("']", "")
+                            a_val = (
+                                a_val.replace("['", "")
+                                .replace("']", "")
+                                .replace('["', "")
+                                .replace('"]', "")
+                            )
+                            values[a] = a_val
+            if "ToMi" in dataset:
+                df_sub_node = df_node[
+                    df_node["Node"].str.contains(f"Belief_{i}_{c}", na=False)
+                    | df_node["Parent node"].str.contains(f"Belief_{i}_{c}", na=False)
+                    | df_node["Parent node"].str.contains(f"State_{i}_1", na=False)
+                ]
+                for index, row in df_sub_node.iterrows():
+                    # likelihood = f'P({row["Node"]} | {row["Parent node"]}) = P({row["Node value"]} | {row["Parent node value"]}) = {round(row["Likelihood"], 3)} \n'
+                    cond_val = (
+                        row["Parent node"]
+                        .replace('["', "")
+                        .replace('"]', "")
+                        .replace("['", "")
+                        .replace("']", "")
+                        .replace("', '", ", ")
+                    )
+                    likelihood = f'•P({row["Node"]} | {cond_val}) = {round(row["Likelihood"], 3)} \n'
+                    node_info += likelihood
+
+            if "BigToM_bbfb" in dataset or "BigToM_bbtb" in dataset:
+                df_sub_node = df_node[
+                    df_node["Node"].str.contains(f"Belief_{i}_{c}", na=False)
+                    | df_node["Parent node"].str.contains(f"Belief_{i}_{c}", na=False)
+                ]
+                for index, row in df_sub_node.iterrows():
+                    # likelihood = f'P({row["Node"]} | {row["Parent node"]}) = P({row["Node value"]} | {row["Parent node value"]}) = {round(row["Likelihood"], 3)} \n'
+                    cond_val = (
+                        row["Parent node"]
+                        .replace('["', "")
+                        .replace('"]', "")
+                        .replace("['", "")
+                        .replace("']", "")
+                        .replace("', '", ", ")
+                    )
+                    likelihood = f'•P({row["Node"]} | {cond_val}) = {round(row["Likelihood"], 3)} \n'
+                    if likelihood not in node_info:
+                        node_info += likelihood
+
                 if i == 0:
                     prior_a = 0
                     prior_b = 0
@@ -743,7 +844,7 @@ if __name__ == "__main__":
                     joint_str += f"{action_cond_obs_prob} * {belief_cond_obs_prob}"
                     joint_val += action_cond_obs_prob * belief_cond_obs_prob
 
-                    joint_info += f"joint prob for P(b_{c}, o, g, a): P(b_{c}|o) * P(a|g,b_{c}) * P(g) * P(o)= {joint_str} = {round(joint_val, 3)} \n"
+                    # joint_info += f"joint prob for P(b_{c}, o, g, a): P(b_{c}|o) * P(a|g,b_{c}) * P(g) * P(o)= {joint_str} = {round(joint_val, 3)} \n"
                     joints.append(joint_val)
                     joint_str = ""
                     joint_val = 0
@@ -798,7 +899,7 @@ if __name__ == "__main__":
                         alter_c = 1
                     else:
                         alter_c = 0
-                    joint_info += f"joint prob for P(b_{c}, o, g, a): P(o) * P(g) * P(a|b,g) * Σ(P(prev b_i) * P(b_{c}|o, prev b_i)) = {joint_str} = {round(joint_val, 3)} \n"
+                    # joint_info += f"joint prob for P(b_{c}, o, g, a): P(o) * P(g) * P(a|b,g) * Σ(P(prev b_i) * P(b_{c}|o, prev b_i)) = {joint_str} = {round(joint_val, 3)} \n"
                     joints.append(joint_val)
                     joint_str = ""
                     joint_val = 0
@@ -828,7 +929,7 @@ if __name__ == "__main__":
         normalization_constant += local_cond
 
         with open(
-            f"{larger_path}results/metrics/{model}_{dataset}_{episode}_back1_reduce1_metrics.json",
+            f"{larger_path}results/metrics/{model}_{dataset}_{episode}_back0_reduce1_metrics.json",
             "r",
         ) as f:
             metrics_data = json.load(f)
@@ -851,8 +952,24 @@ if __name__ == "__main__":
                 if x == "g":
                     assigned_models.append("Goal")
 
+        nld_formatted = ""
+        nld_raw = f"{NLDs[str(i)][1] if str(i) in NLDs else 'Not Inferred'}"
+
+        for n in nld_raw.split("\n"):
+            if n == "" or n == " ":
+                continue
+            nld_formatted += f"•{n}\n"
+        print(nld_formatted)
+
+        str_values = ""
+        values = dict(sorted(values.items()))
+
+        for k, v in values.items():
+            str_values += f"•{k} = {v} \n"
+        print(str_values)
+
         if "MMToM" not in dataset:
-            left = f'At time step {i}, {list(df_middle["Chunk"])[i]}\n\nThe proposed model is {assigned_models[str(i)]}\n\n•P({choices[0]}) = {round(hyp_a[i], 3)} \n•P({choices[1]}) = {round(hyp_b[i], 3)} '
+            left = f"At time step {i},\nThe proposed model is {assigned_models}\n\n•P({choices[0]}) = {round(hyp_a[i], 3)} \n•P({choices[1]}) = {round(hyp_b[i], 3)} \nThe extracted variables are: \n {str_values}"
         else:
             left = f"At time step {i}, {states[i]} \nThe proposed model is {assigned_models}\n\n•P({choices[0]}) = {round(hyp_a[i], 3)} \n•P({choices[1]}) = {round(hyp_b[i], 3)} \nThe extracted variables are: {NLDs[str(i)][1] if str(i) in NLDs else 'Not Inferred'} "
         right_text = (
@@ -876,6 +993,32 @@ if __name__ == "__main__":
         #     )
         # )
 
+    # Added in for highlight:
+    chunks = list(df_middle["Chunk"])
+    # tomi highlighting
+    if "ToMi" in dataset:
+        new_chunks = []
+        counter = 1
+        for c in chunks:
+            c = c.split(".")
+            new_c = ""
+            for c_sentence in c:
+                if c_sentence == "":
+                    continue
+                new_c += f"{counter} {c_sentence}.\n"
+                counter += 1
+            new_c = new_c.rstrip()
+            new_c = new_c.replace("  ", " ")
+            if c == chunks[-1]:
+                new_c = new_c.rstrip("\n")
+            new_chunks.append(new_c)
+        story = story.replace("_", " ")
+    elif "BigToM" in dataset:
+        new_chunks = []
+        for c in chunks:
+            new_chunks.append(c.replace("  ", " ").rstrip())
+        story = story.replace("  ", " ")
+
     choices = eval(df_probs.columns[1].replace("Probs(", "").replace(")", ""))
     # Create and run the application
     root = create_interactive_plot(
@@ -883,6 +1026,7 @@ if __name__ == "__main__":
         data1=hyp_a,
         data2=hyp_b,
         details_text=details_text,
+        chunks=new_chunks,
         series1_name=choices[0],
         series2_name=choices[1],
         title="",  # Posterior Probability Over Time",
