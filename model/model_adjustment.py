@@ -25,12 +25,12 @@ def model_discovery(start_timestep, all_timesteps, verbose, time_variables, prev
                         infer_last_timestamp, no_observation_hypothesis, variable_values_with_time, all_probs, answerfunc, argmax, argmin, save_belief_probs, model_name, \
                         episode_name, infer_belief_at_timestamp, belief_name, get_variables_at_time, mmtom_get_variables_at_time, choices, K, llm, hypo_llm, hypo_method, full, \
                         preproposed_ob_hypos, last_state, inf_agent_action, assigned_models, file_path, clear_current_nodes, dataset_name, states, actions, question, precomputed_states, \
-                        model_variables, no_model_adjustment, self):
+                        model_variables, no_model_adjustment, self, action_likelihood_goal):
     
     results, terminate, model_variables = Bayesian_inference(start_timestep, all_timesteps, verbose, time_variables, previous_belief, inf_agent_name, inf_var_name, estimation_dictionary, \
                         infer_last_timestamp, no_observation_hypothesis, variable_values_with_time, all_probs, answerfunc, argmax, argmin, save_belief_probs, model_name, \
                         episode_name, infer_belief_at_timestamp, belief_name, get_variables_at_time, mmtom_get_variables_at_time, choices, K, llm, hypo_llm, hypo_method, full, \
-                        preproposed_ob_hypos, last_state, inf_agent_action, assigned_models, dataset_name, states, actions, question, precomputed_states, model_variables, self)
+                        preproposed_ob_hypos, last_state, inf_agent_action, assigned_models, dataset_name, states, actions, question, precomputed_states, model_variables, self, action_likelihood_goal)
     
     print("Initial Terminate: ", terminate)
 
@@ -52,7 +52,7 @@ def model_discovery(start_timestep, all_timesteps, verbose, time_variables, prev
         results, terminate, model_variables = Bayesian_inference(start_timestep, all_timesteps, verbose, time_variables, previous_belief, inf_agent_name, inf_var_name, estimation_dictionary, \
                         infer_last_timestamp, no_observation_hypothesis, variable_values_with_time, all_probs, answerfunc, argmax, argmin, save_belief_probs, model_name, \
                         episode_name, infer_belief_at_timestamp, belief_name, get_variables_at_time, mmtom_get_variables_at_time, choices, K, llm, hypo_llm, hypo_method, full, \
-                        preproposed_ob_hypos, last_state, inf_agent_action, assigned_models_test, dataset_name, states, actions, question, precomputed_states, model_variables, self)
+                        preproposed_ob_hypos, last_state, inf_agent_action, assigned_models_test, dataset_name, states, actions, question, precomputed_states, model_variables, self, action_likelihood_goal)
         print("Model test: ", model)
         print("Model test results: ", results)
         # utility = max(results)
@@ -94,7 +94,7 @@ def model_discovery(start_timestep, all_timesteps, verbose, time_variables, prev
             results, terminate, model_variables = Bayesian_inference(start_timestep, all_timesteps, verbose, time_variables, previous_belief, inf_agent_name, inf_var_name, estimation_dictionary, \
                         infer_last_timestamp, no_observation_hypothesis, variable_values_with_time, all_probs, answerfunc, argmax, argmin, save_belief_probs, model_name, \
                         episode_name, infer_belief_at_timestamp, belief_name, get_variables_at_time, mmtom_get_variables_at_time, choices, K, llm, hypo_llm, hypo_method, full, \
-                        preproposed_ob_hypos, last_state, inf_agent_action, assigned_models, dataset_name, states, actions, question, precomputed_states, model_variables, self)
+                        preproposed_ob_hypos, last_state, inf_agent_action, assigned_models, dataset_name, states, actions, question, precomputed_states, model_variables, self, action_likelihood_goal)
             return results, terminate, assigned_models, model_variables
         elif best_utility - initial_utility < benefit_threshold:
             break
@@ -117,7 +117,7 @@ def model_discovery(start_timestep, all_timesteps, verbose, time_variables, prev
 def Bayesian_inference(start_timestep, all_timesteps, verbose, time_variables, previous_belief, inf_agent_name, inf_var_name, estimation_dictionary, \
                         infer_last_timestamp, no_observation_hypothesis, variable_values_with_time, all_probs, answerfunc, argmax, argmin, save_belief_probs, model_name, \
                         episode_name, infer_belief_at_timestamp, belief_name, get_variables_at_time, mmtom_get_variables_at_time, choices, K, llm, hypo_llm, hypo_method, full, \
-                        preproposed_ob_hypos, last_state, inf_agent_action, assigned_models, dataset_name, states, actions, question, precomputed_states, model_variables, self):
+                        preproposed_ob_hypos, last_state, inf_agent_action, assigned_models, dataset_name, states, actions, question, precomputed_states, model_variables, self, action_likelihood_goal):
     
     verbose = False
     no_observation_hypothesis = "NONE"                        
@@ -174,6 +174,7 @@ def Bayesian_inference(start_timestep, all_timesteps, verbose, time_variables, p
             print("Variables: ", variables)
         
         if i == all_timesteps - 1:
+            
             results, estimation_dictionary, all_probs = infer_last_timestamp(
                 self,
                 i=i,
@@ -185,6 +186,7 @@ def Bayesian_inference(start_timestep, all_timesteps, verbose, time_variables, p
                 variable_values_with_time=variable_values_with_time,
                 all_probs=all_probs,
                 all_prob_estimations=estimation_dictionary,
+                action_likelihood_goal=action_likelihood_goal,
             )
             
             # determine if we can stop inference
@@ -211,6 +213,21 @@ def Bayesian_inference(start_timestep, all_timesteps, verbose, time_variables, p
             return results, terminate, model_variables
 
         else:
+            if self.inf_var_name == "Goal":
+                action_likelihood_goal[i], self.estimation_dictionary, all_probs = (
+                    self.infer_goal_at_timestamp(
+                        self,
+                        time_variables=time_variables,
+                        i=i,
+                        previous_belief=previous_belief,
+                        belief_name=belief_name,
+                        variable_values_with_time=variable_values_with_time,
+                        all_probs=all_probs,
+                        no_observation_hypothesis=no_observation_hypothesis,
+                        all_prob_estimations=self.estimation_dictionary,
+                        goal_name=f"{self.inf_agent_name}'s Goal",
+                    )
+                )
             previous_belief, estimation_dictionary, all_probs = infer_belief_at_timestamp(
                 self,
                 i=i,

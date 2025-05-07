@@ -4,7 +4,7 @@ Do not state any reason for the hypotheses. Do not contain any form of explanati
 Output a list of hypotheses of length [num] in following form: ["aaa.", "bbb.", ...]
 
 Given information: [Information]
-Ensure that the hypotheses align with the given information perfectly. The hypotheses could be like "[Character] believes that A is not in B".
+Ensure that the hypotheses align with the given information perfectly. The hypotheses could be like "[Character] believes that A is in B".
 First, list out all entities in the given information. Then, formulate hypotheses using all entities. Make sure the hypotheses starts with [Character].
 Output the hypotheses in the following form: ["aaa."]
 Observation Hypotheses: []

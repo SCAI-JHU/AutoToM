@@ -191,7 +191,7 @@ class BayesianInferenceModel:
                     if parent == "Belief" and self.previous_actions:
                         # Previous actions of the agents is a part of belief.
                         cleaned_states = var_dict['State'].replace('\n', ' ')
-                        info_var.append(f"{self.inf_agent}'s Previous Actions: {self.previous_actions}\n{self.inf_agent}'s {parent}: {var_dict[parent]}")
+                        info_var.append(f"{self.inf_agent}'s Previous Actions: {self.previous_actions}\n{self.inf_agent}'s {parent} after observation: {var_dict[parent]}")
                     else:
                         info_var.append(f"{self.inf_agent}'s {parent}: {var_dict[parent]}")
 
@@ -259,17 +259,16 @@ class BayesianInferenceModel:
         if prev_belief.prior_probs is None:
             return
         
-        print("Hypothesis propagation", prev_belief, belief)
+        # print("Hypothesis propagation", prev_belief, belief)
         for i, hyp in enumerate(prev_belief.possible_values):
             prob = prev_belief.prior_probs[i]
-            if prob > 0.6: # A threshold for carry-on hypotheses
+            if prob > 0.8: # A threshold for carry-on hypotheses
                 if hyp not in belief.possible_values and hyp != "NONE":
                     belief.possible_values.append(hyp)
                     enh_print(f"Carried belief hypothesis {hyp} with likelihood {prob}")
 
         belief.prior_probs = np.ones((len(belief.possible_values)))
         self.variables["Belief"] = belief
-        enh_print(f"Updated belief as {belief}")
 
     def reduce_obs_hypospace(self):
         all_node_results = []

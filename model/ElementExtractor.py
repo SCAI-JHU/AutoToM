@@ -478,7 +478,6 @@ def mmtom_get_variables(
     elif "doesn't think" in question:
         known_Belief = question.split("If ")[1].split(",")[0] + "."
 
-    preproposed_ob_hypos = []
     val_with_time = []
     for i in range(len(actions)):
         if inf_agent_name not in actions[i]:
@@ -492,15 +491,6 @@ def mmtom_get_variables(
             "All Actions": [actions[i]],
         }
         val_with_time.append(vals)
-
-    # Propose quality hypotheses for observation and belief, conditioned on observable variables
-    for c in choices:
-        preproposed_ob_hypos += hypothesis_generation([], c + '; ' + val_with_time[-1][f"{inf_agent_name}'s Action"], 
-            now_story, inf_agent_name,"Observation",1,hypo_llm,
-        )
-    preproposed_ob_hypos += hypothesis_generation_no_observation(
-        choices, inf_agent_name, hypo_llm, True
-    )
 
     for i, vals in enumerate(val_with_time):
         var_dict = {}
@@ -558,22 +548,15 @@ def mmtom_get_variables(
             else:
 
                 if var_type[1] == "Observation":
-
-                    if len(preproposed_ob_hypos) == 0:
-                        for c in choices:
-                            preproposed_ob_hypos += hypothesis_generation(
-                                [],
-                                c + '; ' + vals[f"{inf_agent_name}'s Action"],
-                                now_story,
-                                character,
-                                var_type[1],
-                                1,
-                                hypo_llm,
-                            )
-                        preproposed_ob_hypos += hypothesis_generation_no_observation(
-                            choices, character, hypo_llm, True
+                    hypos = []
+                    # Propose quality hypotheses for observation and belief, conditioned on observable variables
+                    for c in choices:
+                        hypos += hypothesis_generation([], c + '; ' + vals[f"{inf_agent_name}'s Action"], 
+                            now_story, inf_agent_name,"Observation",1,hypo_llm,
                         )
-                    hypos = preproposed_ob_hypos
+                    hypos += hypothesis_generation_no_observation(
+                        choices, inf_agent_name, hypo_llm, True
+                    )
 
                 elif var_type[1] == "Goal" and known_Goal != "NONE":
                     var_dict[var_name] = Variable(

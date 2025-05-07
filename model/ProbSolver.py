@@ -514,9 +514,10 @@ class ProblemSolver:
                     time_variables[start_timestep - 1][belief_name]
                 )
                 previous_belief.name = "Previous Belief"
+                previous_belief.prior_probs = np.array([0.1 for x in previous_belief.possible_values])
             else:
                 previous_belief = Variable(
-                    "Previous Belief", True, False, ["NONE"], np.ones(1)
+                    "Previous Belief", True, False, ["NONE"], np.ones(1) * 0.1
                 )
 
             output_folder = "../results/node_results"
@@ -661,7 +662,7 @@ class ProblemSolver:
 
                 belief_name = f"{self.inf_agent_name}'s Belief"
                 previous_belief = Variable(
-                    "Previous Belief", True, False, ["NONE"], np.ones(1)
+                    "Previous Belief", True, False, ["NONE"], np.ones(1) * 0.1
                 )
 
                 for i in range(start_timestep, all_timesteps):
@@ -741,6 +742,8 @@ class ProblemSolver:
                         previous_belief = deepcopy(
                             time_variables[start_timestep - 1][belief_name]
                         )
+                        previous_belief.name = "Previous Belief"
+                        previous_belief.prior_probs = np.array([0.1 for x in previous_belief.possible_values])
                     else:
                         previous_belief = Variable(
                             "Previous Belief", True, False, ["NONE"], np.ones(1)
@@ -847,7 +850,6 @@ def main(args):
     """
     dataset_name = args.dataset_name
     data = load_full_dataset(args.dataset_name)
-
     # data = load_dataset(dataset_name)
     cnt = 0
     correct = []
