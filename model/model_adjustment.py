@@ -217,7 +217,7 @@ def Bayesian_inference(start_timestep, all_timesteps, verbose, time_variables, p
                 action_likelihood_goal[i], self.estimation_dictionary, all_probs = (
                     self.infer_goal_at_timestamp(
                         self,
-                        time_variables=time_variables,
+                        time_variables=variables,
                         i=i,
                         previous_belief=previous_belief,
                         belief_name=belief_name,

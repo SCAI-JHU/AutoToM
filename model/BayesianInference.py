@@ -188,10 +188,11 @@ class BayesianInferenceModel:
                             continue
                     info_var.append(f"{parent}: {var_dict[parent]}")
                 else:
-                    if parent == "Belief" and self.previous_actions:
-                        # Previous actions of the agents is a part of belief.
-                        cleaned_states = var_dict['State'].replace('\n', ' ')
-                        info_var.append(f"{self.inf_agent}'s Previous Actions: {self.previous_actions}\n{self.inf_agent}'s {parent} after observation: {var_dict[parent]}")
+                    if parent == "Belief" and self.previous_actions and self.dataset_name == "MMToM-QA":
+                        # Previous actions of the agents is a part of belief. trying on MMToM.
+                        info_var.append(f"{self.inf_agent}'s {parent} after observing: {var_dict[parent]}")
+                    elif parent == "Goal" and "MuMa" in self.dataset_name:
+                        info_var.append(f"{self.inf_agent}'s Social Goal: {var_dict[parent]}")
                     else:
                         info_var.append(f"{self.inf_agent}'s {parent}: {var_dict[parent]}")
 
@@ -537,7 +538,7 @@ class BayesianInferenceModel:
                 for i, (val, prob) in enumerate(comb):
                     var_dict[left[i]] = val
                     prior_prob *= prob
-                    if prob != 1.0:
+                    if prob != 1.0 and prob != 0.1:
                         NLD += f'Prior: P({left[i]}="{val}")={prob}; '
 
                 logits, individual_likelihoods, node_result, NLD_calc = (

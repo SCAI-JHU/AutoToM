@@ -73,6 +73,7 @@ def infer_belief_at_timestamp(
         chunk = variable_values_with_time[i]["Chunk"]
     if "Belief" in self.inf_var_name:
         now_probs = {
+            "Time": i,
             "Chunk": chunk,
             f"Probs({self.choices})": results,
         }
@@ -175,6 +176,7 @@ def infer_last_timestamp(
     elif i < len(variable_values_with_time) and "Chunk" in variable_values_with_time[i]:
         chunk = variable_values_with_time[i]["Chunk"]
     now_probs = {
+        "Time": i,
         "Chunk": chunk,
         f"Probs({self.choices})": results,
     }
@@ -252,6 +254,7 @@ def infer_goal_at_timestamp(
         chunk = variable_values_with_time[i]["Chunk"]
 
     now_probs = {
+        "Time": i,
         "Chunk": chunk,
         f"Probs({self.choices})": results,
     }

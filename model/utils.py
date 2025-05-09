@@ -35,6 +35,14 @@ def get_info(s, num=0):
             break
     return ret
 
+def natural_lang_translation(text):
+    prompt = f"""This is a record of a Bayesian model, containing details of the most salient joint probability. Please translate this record into natural language description used for model explanation:
+Record:{text}
+Translate into natural language explanation in several words.
+"""
+    result, _ = llm_request(prompt, temperature=0.0, model="gpt-4o")
+    print(result)
+    return result
 
 def extract_frames(video_id, num_frames=8):
     cap = cv2.VideoCapture(f"../benchmarks/data/MuMa/videos/video_{video_id}.mp4")

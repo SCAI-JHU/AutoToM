@@ -93,7 +93,7 @@ for d in data:
 
     updated_actions = []
     diff_action_idx = []
-    for j, a in enumerate(actions):
+    for j, a in enumerate(new_actions):
         if j < len(actions) - 1 and actions[j] == actions[j + 1]:
             continue
         diff_action_idx.append(j)

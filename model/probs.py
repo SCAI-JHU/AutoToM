@@ -114,11 +114,19 @@ If {inf_agent}'s goal, {inf_agent}'s belief of goal, and {inf_agent}'s action do
 Determine if {inf_agent}'s action is likely.
 A) Likely.
 B) Unlikely."""
-        else:  # P(Action | Goal, Belief)
+        elif "Social Goal" in info:  # P(Action | Social Goal, Belief) in multi-agent setting
             prompt = f"""Determine if the statement is likely, respond with only either A or B. If it's not certain but it's possible, it's likely.
 {info}
 Here is a statement of {inf_agent}'s action. Think about {inf_agent}'s goal.
 {inf_agent} will perform actions according to {inf_agent}'s belief, and any action that does not align with the belief is very unlikely, except when {inf_agent}'s goal is to hinder or to prevent others, and in this case (goal is hindering others) {inf_agent}'s action is only likely when it's different with {inf_agent}'s belief. If {inf_agent}'s mental states contains conditions like "When giving information" and the action is not giving information, it's unlikely.
+Determine if the following statement is likely: {statement}
+A) Likely.
+B) Unlikely."""
+        else: # P(Action | Goal, Belief)
+            prompt = f"""Determine if the statement is likely, respond with only either A or B.
+{info}
+Here is a statement of {inf_agent}'s action. The belief stands for {inf_agent}'s current belief, which is true. {inf_agent} is likely to act according to goal and belief (the wording for objects must be same. You should ignore the correlation of different objects. e.g., plate and apple are two different and irrelevant object.). Notice that {inf_agent}'s belief does not represent the goal.
+When belief and goal are irrelevant, and action is driven by goal, it's likely. When belief and goal are relevant (about exactly the same object) and they contradict with action, it's unlikely.
 Determine if the following statement is likely: {statement}
 A) Likely.
 B) Unlikely."""
@@ -210,8 +218,8 @@ B) Unlikely."""
         # clip the values
         if action_exponent is not None and "Action" in variable:
             return math.pow(prob_a, action_exponent)
-        if verbose:
-            print(prompt, "\n", prob_a)
+
+        print(prompt, "\n", prob_a)
         return prob_a
 
 
