@@ -60,13 +60,13 @@ def model_discovery(start_timestep, all_timesteps, verbose, time_variables, prev
         utility = - entropy(results)
         return utility
     
-    variables_for_experiments = [
-        var for var in ["Belief", "Observation", "Goal", "Action"]
-        if var not in assigned_models[start_timestep]
-    ]
 
     recompute = False
     while assigned_models[start_timestep] != model_space[0]:
+        variables_for_experiments = [
+            var for var in ["Belief", "Observation", "Goal", "Action"]
+            if var not in assigned_models[start_timestep]
+        ]
         utility_experiments = {}
         for var in variables_for_experiments:
             model = modify_variables(assigned_models[start_timestep], [var])
@@ -364,6 +364,7 @@ def modify_variables(assigned_model, vars, action="add"):
         if vars == ["Action"]:
             vars.append("Goal")
         for var in vars:
+            print('inside loop', var)
             assert var not in modified_model
             modified_model.append(var)
         modified_model = sorted(
