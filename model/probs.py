@@ -125,7 +125,7 @@ B) Unlikely."""
         else: # P(Action | Goal, Belief)
             prompt = f"""Determine if the statement is likely, respond with only either A or B.
 {info}
-Here is a statement of {inf_agent}'s action. The belief stands for {inf_agent}'s current belief, which is true. {inf_agent} is likely to act according to goal and belief (the wording for objects must be same. You should ignore the correlation of different objects. e.g., plate and apple are two different and irrelevant object.). Notice that {inf_agent}'s belief does not represent the goal.
+Here is a statement of {inf_agent}'s action. The belief stands for {inf_agent}'s current belief. {inf_agent} is likely to act according to goal and belief concerning certain objects (the wording for objects must be same. You should ignore the correlation of different objects. e.g., plate and apple are two different objects.) Notice that {inf_agent}'s belief does not represent the goal.
 When belief and goal are irrelevant, and action is driven by goal, it's likely. When belief and goal are relevant (about exactly the same object) and they contradict with action, it's unlikely.
 Determine if the following statement is likely: {statement}
 A) Likely.
