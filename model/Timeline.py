@@ -188,7 +188,7 @@ class TimeLine:
         elif (
             ("Action" not in self.variable_names)
             or (self.inf_var == "Action")
-            or (self.model_name == "automated")
+            or (self.model_name == "automated" and now_story != "")
         ):
             # If not inferring action /model discovery, more timestep
             chunks_wording.append(now_story)
