@@ -67,6 +67,9 @@ class ProblemSolver:
         nested_timeline_before=None,
         nested_time_variables_before=None,
         init_belief=False,
+        use_all_timesteps=False,
+        predefined_belief_hypotheses=None,
+        rational_agent_statement=False
     ):
         self.world_rules = (
             ""  # we do not use this value and keep it constant for all datasets
@@ -102,7 +105,8 @@ class ProblemSolver:
         self.start_time = time.time()
         self.middle_result_time = self.start_time
         self.no_model_adjustment = no_model_adjustment
-
+        self.use_all_timesteps = use_all_timesteps
+        self.predefined_belief_hypotheses = predefined_belief_hypotheses
         self.recursion_depth = recursion_depth
 
         self.nested_timeline_before = nested_timeline_before
@@ -135,7 +139,7 @@ class ProblemSolver:
             "Observation",
         ]  # all possbile variables for extraction
         self.init_belief = init_belief
-
+        self.rational_agent_statement = rational_agent_statement
         # import tracker and helper functions
         self.clear_current_nodes = NodeResultTracker.clear_current_nodes
         self.translate_and_add_node_results = (
@@ -151,6 +155,7 @@ class ProblemSolver:
         self.check_nested = utils.check_nested
         self.get_nested_states = Nested.get_nested_states
         self.save_nested_results = Nested.save_nested_results
+
 
     def information_extraction(self):
         """
@@ -568,7 +573,8 @@ class ProblemSolver:
                     saved_model_variables,
                     self.no_model_adjustment,
                     self,
-                    action_likelihood_goal
+                    action_likelihood_goal,
+                    self.use_all_timesteps
                 )
             )
             if terminate:
@@ -652,7 +658,7 @@ class ProblemSolver:
                 no_observation_hypothesis,
                 variable_values_with_time,
                 all_probs,
-                action_likelihood_goal
+                action_likelihood_goal,
             )
 
         else:
@@ -886,11 +892,13 @@ def main(args):
     print(f"Back inference is {back_inference}")
     reduce_hypotheses = args.reduce_hypotheses
     print(f"Reduce observation hypotheses is {reduce_hypotheses}")
+    use_all_timesteps = args.use_all_timesteps
+    print(f"Use all timesteps is {use_all_timesteps}")
     costs = []
     apis = []
     for i, d in enumerate(data):
-        if i < 300:
-            continue
+        # if i < 300:
+        #     continue
         print(f"Question {i}")
         states, actions, video_id = None, None, None
         if "MuMa" in dataset_name:
@@ -935,6 +943,7 @@ def main(args):
             prev_hyp=None,
             no_model_adjustment=no_model_adjustment,
             recursion_depth=order,
+            use_all_timesteps=use_all_timesteps
         )
 
         final_probs, model_record = solver.solve()
@@ -1071,7 +1080,7 @@ if __name__ == "__main__":
         help="Enable running AutoToM with backwards inference.",
     )
     parser.add_argument(
-        "--reduce_hypotheses", type=bool, default=True, 
+        "--no_hypothesis_reduction", action='store_true', default=False, 
         help="Flag for running AutoToM with reduced hypotheses.",
     )
     parser.add_argument(
@@ -1092,10 +1101,16 @@ if __name__ == "__main__":
         default='["State", "Observation", "Belief", "Action", "Goal"]',
         help="When automated is false, you can assign a manually defined model here."
     )
+    parser.add_argument(
+        "--use_all_timesteps",
+        action="store_true",
+        help="Used to run experiments where all timesteps in the story are considered."
+    )
     parser.add_argument("--nested", default=None, help="If None, the model will figure out the order itself.")
     args = parser.parse_args()
     args.assigned_model = eval(args.assigned_model)
     args.back_inference = not args.no_back_inference
+    args.reduce_hypotheses = not args.no_hypothesis_reduction
     print(args)
     main(args)
     # example of command line run with AutoToM, back inference, reduced hypotheses:

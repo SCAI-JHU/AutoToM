@@ -738,6 +738,7 @@ def get_variables_at_time(
     inf_agent_action,
     dataset_name,
     precomputed_states,
+    predefined_bel_hypos,
 ):
     now_story = vals["Chunk"]
     inf_agent_action = inf_agent_action
@@ -818,6 +819,8 @@ def get_variables_at_time(
                             choices, character, hypo_llm, True
                         )
                     hypos = preproposed_ob_hypos
+            elif var_type[1] == "Belief" and predefined_bel_hypos != None:
+                hypos = predefined_bel_hypos
             else:
                 hypo_c = []
                 for c in choices:

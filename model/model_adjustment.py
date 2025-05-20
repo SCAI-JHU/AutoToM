@@ -25,8 +25,12 @@ def model_discovery(start_timestep, all_timesteps, verbose, time_variables, prev
                         infer_last_timestamp, no_observation_hypothesis, variable_values_with_time, all_probs, answerfunc, argmax, argmin, save_belief_probs, model_name, \
                         episode_name, infer_belief_at_timestamp, belief_name, get_variables_at_time, mmtom_get_variables_at_time, choices, K, llm, hypo_llm, hypo_method, full, \
                         preproposed_ob_hypos, last_state, inf_agent_action, assigned_models, file_path, clear_current_nodes, dataset_name, states, actions, question, precomputed_states, \
-                        model_variables, no_model_adjustment, self, action_likelihood_goal):
+                        model_variables, no_model_adjustment, self, action_likelihood_goal, use_all_timesteps):
     
+    if use_all_timesteps is True:
+        global utility_terminate_threshold
+        utility_terminate_threshold = 0  # Always consider all time steps
+
     results, terminate, model_variables = Bayesian_inference(start_timestep, all_timesteps, verbose, time_variables, previous_belief, inf_agent_name, inf_var_name, estimation_dictionary, \
                         infer_last_timestamp, no_observation_hypothesis, variable_values_with_time, all_probs, answerfunc, argmax, argmin, save_belief_probs, model_name, \
                         episode_name, infer_belief_at_timestamp, belief_name, get_variables_at_time, mmtom_get_variables_at_time, choices, K, llm, hypo_llm, hypo_method, full, \
@@ -149,7 +153,7 @@ def Bayesian_inference(start_timestep, all_timesteps, verbose, time_variables, p
                     inf_agent_name=inf_agent_name, inf_var_name=inf_var_name, choices=choices,
                     K=K, llm=llm, hypo_llm=hypo_llm, verbose=verbose,
                     hypo_method=hypo_method, full=full, preproposed_ob_hypos=preproposed_ob_hypos,
-                    last_state=last_state, inf_agent_action=inf_agent_action, dataset_name=dataset_name, precomputed_states=precomputed_states
+                    last_state=last_state, inf_agent_action=inf_agent_action, dataset_name=dataset_name, precomputed_states=precomputed_states, predefined_bel_hypos=self.predefined_belief_hypotheses
                 )
             else:
                 now_time_variables, preproposed_ob_hypos = mmtom_get_variables_at_time(
@@ -187,6 +191,7 @@ def Bayesian_inference(start_timestep, all_timesteps, verbose, time_variables, p
                 all_probs=all_probs,
                 all_prob_estimations=estimation_dictionary,
                 action_likelihood_goal=action_likelihood_goal,
+                rational_agent_statement=self.rational_agent_statement
             )
             
             # determine if we can stop inference
@@ -226,6 +231,7 @@ def Bayesian_inference(start_timestep, all_timesteps, verbose, time_variables, p
                         no_observation_hypothesis=no_observation_hypothesis,
                         all_prob_estimations=self.estimation_dictionary,
                         goal_name=f"{self.inf_agent_name}'s Goal",
+                        rational_agent_statement=self.rational_agent_statement
                     )
                 )
             previous_belief, estimation_dictionary, all_probs = infer_belief_at_timestamp(
@@ -237,7 +243,8 @@ def Bayesian_inference(start_timestep, all_timesteps, verbose, time_variables, p
                 variable_values_with_time=variable_values_with_time,
                 all_probs=all_probs, 
                 no_observation_hypothesis=no_observation_hypothesis, 
-                all_prob_estimations=estimation_dictionary)
+                all_prob_estimations=estimation_dictionary,
+                rational_agent_statement=self.rational_agent_statement)
     
 
 

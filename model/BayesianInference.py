@@ -49,7 +49,8 @@ class BayesianInferenceModel:
         all_prob_estimations={},
         no_observation_hypothesis="NONE",
         reduce_hypotheses=False,
-        previous_actions=None
+        previous_actions=None,
+        rational_agent_statement=False
     ):
         self.model_name = model_name
         self.episode_name = episode_name
@@ -69,7 +70,7 @@ class BayesianInferenceModel:
             new_variables.append(variables[i])
         variables = new_variables
         self.previous_observation_hypotheses = set()
-
+        self.rational_agent_statement = rational_agent_statement
         self.variables = {var.name: var for var in variables}
         self.context = context
         self.llm = llm
@@ -218,7 +219,7 @@ class BayesianInferenceModel:
                     or self.dataset_name == "BigToM_fafb"
                 ):
                     info = [info, (self.answer_choices)]
-                    logits = get_likelihood(
+                    logits = capping_value(get_likelihood(
                         info,
                         f"{var_dict[son]}",
                         dataset_name=self.dataset_name,
@@ -226,7 +227,7 @@ class BayesianInferenceModel:
                         verbose=self.verbose,
                         variable="Actions",
                         inf_agent=self.inf_agent,
-                    )
+                    ))
                 if key in self.recorder:
                     logits = capping_value(self.recorder[key])
                 else:
@@ -239,6 +240,7 @@ class BayesianInferenceModel:
                             verbose=self.verbose,
                             variable=son,
                             inf_agent=self.inf_agent,
+                            rational_agent_statement=self.rational_agent_statement
                         )
                     )
                     # print(logits)
@@ -368,7 +370,7 @@ class BayesianInferenceModel:
                 initial_belief_vals = self.variables["Belief"].possible_values
                 probs = []
                 for b in initial_belief_vals:
-                    logits = get_likelihood(
+                    logits = capping_value(get_likelihood(
                         self.context,
                         b,
                         dataset_name=self.dataset_name,
@@ -376,7 +378,7 @@ class BayesianInferenceModel:
                         verbose=self.verbose,
                         variable="Initial Belief",
                         inf_agent=self.inf_agent,
-                    )
+                    ))
                     probs.append(logits)
                 exps = np.exp(probs)
                 probs = exps / np.sum(exps)
@@ -410,7 +412,7 @@ class BayesianInferenceModel:
                 probs = []
 
                 for b in initial_belief_vals:
-                    logits = get_likelihood(
+                    logits = capping_value(get_likelihood(
                         self.context,
                         b,
                         dataset_name=self.dataset_name,
@@ -418,7 +420,7 @@ class BayesianInferenceModel:
                         verbose=self.verbose,
                         variable="Initial Belief",
                         inf_agent=self.inf_agent,
-                    )
+                    ))
                     probs.append(logits)
                 exps = np.exp(probs)
                 probs = exps / np.sum(exps)

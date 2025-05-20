@@ -28,6 +28,7 @@ def get_likelihood(
     variable=None,
     inf_agent=None,
     action_exponent=None,
+    rational_agent_statement=False,
 ):
     likelihood = get_likelihood_general(
         info,
@@ -38,6 +39,7 @@ def get_likelihood(
         variable,
         inf_agent,
         action_exponent,
+        rational_agent_statement=rational_agent_statement
     )
     return likelihood
 
@@ -51,6 +53,7 @@ def get_likelihood_general(
     variable=None,
     inf_agent=None,
     action_exponent=None,
+    rational_agent_statement=False
 ):
 
     if "Observation" in variable:
@@ -123,10 +126,14 @@ Determine if the following statement is likely: {statement}
 A) Likely.
 B) Unlikely."""
         else: # P(Action | Goal, Belief)
+            if rational_agent_statement:
+                rational_statement = f" {inf_agent} is very sure of their belief and will not perform unnecessary actions."
+            else:
+                rational_statement = ""
             prompt = f"""Determine if the statement is likely, respond with only either A or B.
 {info}
 Here is a statement of {inf_agent}'s action. The belief stands for {inf_agent}'s current belief. {inf_agent} is likely to act according to goal and belief concerning certain objects (the wording for objects must be same. You should ignore the correlation of different objects. e.g., plate and apple are two different objects.) Notice that {inf_agent}'s belief does not represent the goal.
-When belief and goal are irrelevant, and action is driven by goal, it's likely. When belief and goal are relevant (about exactly the same object) and they contradict with action, it's unlikely.
+When belief and goal are irrelevant, and action is driven by goal, it's likely. When belief and goal are relevant (about exactly the same object) and they contradict with action, it's unlikely.{rational_statement}
 Determine if the following statement is likely: {statement}
 A) Likely.
 B) Unlikely."""
