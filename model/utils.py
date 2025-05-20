@@ -171,7 +171,7 @@ def llm_request(
 
 def llama_request(prompt, max_tokens=200):
     API_TOKEN = os.environ["LLAMA_API_KEY"]
-    cache_directory = "/scratch/tshu2/cjin33"
+    cache_directory = ""
     model_name = "meta-llama/Llama-3.1-8B-Instruct"
 
     model_id = "meta-llama/Meta-Llama-3.1-8B-Instruct"
