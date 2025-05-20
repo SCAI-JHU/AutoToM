@@ -378,6 +378,176 @@ def gpt_request(
         time.sleep(20)
         return gpt_request(prompt, temperature, max_tokens, model, hypo, verbose)
 
+def gpt_request_o3_mini_high(
+    prompt,
+    temperature=0.0,
+    max_tokens=3000,
+    model="gpt-4o",
+    hypo=False,
+    verbose=False,
+    message_role="user",
+    seed=42,
+    logprobs=False,
+    top_p=0,
+    top_logprobs=5,
+    action_exponent=None,
+    variable=None,
+):
+    global cost_of_information_extracting
+    global cost_of_proposing_hypotheses
+    global times_of_information_extracting
+    global times_of_proposing_hypotheses
+    
+    
+    cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    
+    
+    cache_file = os.path.join(cache_dir, "prompt_response_cache.json")
+    
+    cache_data = {}
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, 'r', encoding='utf-8') as f:
+                cache_data = json.load(f)
+        except Exception as e:
+            enh_print(f"Error reading cache: {e}", "red")
+    
+    cache_key = f"{prompt}_{model}_{temperature}_{max_tokens}_{seed}_{logprobs}"
+    if logprobs:
+        cache_key += f"_{top_p}_{top_logprobs}"
+    if action_exponent is not None and variable is not None:
+        cache_key += f"_{action_exponent}_{variable}"
+        
+    if cache_key in cache_data:
+        enh_print(f"Using cached response for prompt: {prompt[:50]}...", "yellow")
+        return cache_data[cache_key]["response"], cache_data[cache_key]["cost"]
+    
+    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    try:
+        # getting the liklihood with gpt
+        if logprobs:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": message_role,
+                        "content": prompt,
+                    },
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                seed=seed,
+                top_p=top_p,
+                top_logprobs=top_logprobs,
+                logprobs=logprobs,
+            )
+
+        else:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": message_role,
+                        "content": prompt,
+                    },
+                ],
+                response_format={"type": "text"},
+                reasoning_effort="high",
+                # temperature=temperature,
+                # max_tokens=max_tokens,
+                # seed=seed,
+            )
+        if model == "gpt-4":
+            inp, op = 30 / 1000000, 60 / 1000000
+        elif model == "gpt-4o":
+            inp, op = 5 / 1000000, 15 / 1000000
+        elif model == "gpt-3.5-turbo":
+            inp, op = 0.5 / 1000000, 1.5 / 1000000
+        else:
+            inp, op = 0, 0
+        usage = response.usage
+        cost = usage.prompt_tokens * inp + usage.completion_tokens * op
+        if hypo:
+            cost_of_proposing_hypotheses += cost
+            times_of_proposing_hypotheses += 1
+            if times_of_proposing_hypotheses % 10 == 0:
+                enh_print(
+                    f"Accumulated Cost of Proposing Hypotheses: {cost_of_proposing_hypotheses} in {times_of_proposing_hypotheses} times",
+                    "red",
+                )
+        else:
+            cost_of_information_extracting += cost
+            times_of_information_extracting += 1
+            if times_of_information_extracting % 10 == 0:
+                enh_print(
+                    f"Accumulated Cost of Extracting Information: {cost_of_information_extracting} in {times_of_information_extracting} times",
+                    "red",
+                )
+        # if verbose:
+        # enh_print(prompt)
+        # enh_print(response.choices[0].message.content.strip(), color="red")
+        # getting the liklihood
+        result = None
+        if logprobs:
+            response_json_str = response.model_dump_json(indent=2)
+            response_dict = json.loads(response_json_str)
+            logprob_a = None
+            if verbose:
+                print(
+                    response_dict["choices"][0]["logprobs"]["content"][0][
+                        "top_logprobs"
+                    ]
+                )
+            for logprob in response_dict["choices"][0]["logprobs"]["content"][0][
+                "top_logprobs"
+            ]:
+                if str(logprob["bytes"]) == str([65]):
+                    logprob_a = logprob["logprob"]
+                    break
+            if logprob_a == None:
+                prob_a = None
+            else:
+                prob_a = math.exp(logprob_a)
+            if prob_a == None:
+                if verbose:
+                    print(
+                        f"Encountering None values in prob_a!!\n\n{prompt}\n\n{response_dict}"
+                    )
+                result = 0.1
+            else:
+                if prob_a < 0.03:
+                    prob_a = 0.03
+                if prob_a > 0.97:
+                    prob_a = 1.0
+                # clip the values
+                if action_exponent is not None and "Action" in variable:
+                    result = math.pow(prob_a, action_exponent)
+                else:
+                    result = prob_a
+                if verbose:
+                    print(prompt, "\n", prob_a)
+        else:
+            result = response.choices[0].message.content.strip()
+        
+        cache_data[cache_key] = {
+            "response": result,
+            "cost": cost,
+            "timestamp": time.time()
+        }
+        
+        try:
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                json.dump(cache_data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            enh_print(f"Error writing cache: {e}", "red")
+        
+        return result, cost
+    except Exception as e:
+        print(f"retrying due to an error {e}")
+        time.sleep(20)
+        return gpt_request_o3_mini_high(prompt, temperature, max_tokens, model, hypo, verbose)
+
 
 def enh_print(x, color="green"):
     if color == "green":
