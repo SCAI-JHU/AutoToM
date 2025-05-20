@@ -1,19 +1,6 @@
-## AutoToM: Automated Bayesian Inverse Planning and Model Discovery<br>for Open-ended Theory of Mind
-### [Paper](https://arxiv.org/abs/2502.15676) | [Project Page](https://chuanyangjin.com/AutoToM) | [Tweet](https://x.com/chuanyang_jin/status/1894737913499246665)
+## AutoToM: Scaling Model-based Mental Inference via Automated Agent Modeling
 
-We propose AutoToM, an automated Bayesian Inverse Planning and Model Discovery for Open-ended Theory of Mind. 
-
-![intro](visuals/intro.png)
-
-## Example Usage
-
-*To run AutoToM on MMToM-QA, with the default settings of reduced hypotheses and backwards inference*: 
-
-    python ProbSolver.py --automated --dataset_name "MMToM-QA"
-
-*To run AutoToM on ToMi-1st with a specified model input*: 
-
-    python ProbSolver.py --dataset_name "ToMi-1st" --assigned_model "['State', 'Observation', 'Belief']"
+We propose AutoToM, an automated agent modeling method for scalable, robust, and interpretable mental inference.
 
 ## Requirements
 
@@ -29,19 +16,27 @@ We propose AutoToM, an automated Bayesian Inverse Planning and Model Discovery f
     
     - On Windows: `set OPENAI_API_KEY='your-api-key'`
 
+## Experiment 1: Evaluation on ToM Benchmarks
+
+*To run AutoToM on MMToM-QA, with the default settings of reduced hypotheses and backwards inference*: 
+    
+    cd model
+    python ProbSolver.py --automated --dataset_name "MMToM-QA"
+
+## Experiment 2: Evaluation on Classic Cognitive Studies
+
+*To evaluate AutoToM on the cognitive experiments (Food Truck Scenarios (Desire and Belief inference) / Online Goal Inference):
+    
+    cd Experiment\ 2
+    cd Food\ Truck\ Scenarios # or, cd Online\ Goal\ Inference
+    python eval_AutoToM.py
+
+The analysis code is in `analysis.ipynb` under the folder corresponding to each task.
+
+## Experiment 3: Embodied Assistance
+
+
+
 ## Testing AutoToM with customized questions
 
 Please check out ``playground.ipynb``. Simply replace the story and choices with your customized input to see how *AutoToM* discover Bayesian models and conduct inverse planning!
-
-## Citation
-
-Please cite the paper and star this repo if you find it useful, thanks!
-
-```bibtex
-@article{zhang2025autotom,
-  title={AutoToM: Automated Bayesian Inverse Planning and Model Discovery for Open-ended Theory of Mind},
-  author={Zhang, Zhining and Jin, Chuanyang and Jia, Mung Yao and Shu, Tianmin},
-  journal={arXiv preprint arXiv:2502.15676},
-  year={2025}
-}
-```
