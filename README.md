@@ -1,4 +1,4 @@
-## AutoToM: Scaling Model-based Mental Inference<br> via Automated Agent Modeling
+## AutoToM: Scaling Model-based Mental Inference via Automated Agent Modeling
 
 We propose AutoToM, an automated agent modeling method for scalable, robust, and interpretable mental inference.
 
@@ -27,8 +27,8 @@ We propose AutoToM, an automated agent modeling method for scalable, robust, and
 
 *To evaluate AutoToM on the cognitive experiments (Food truck scenarios (Desire and belief inference) / Online goal inference)*:
     
-    cd Experiment\ 2
-    cd Food\ Truck\ Scenarios # or, cd Online\ Goal\ Inference
+    cd experiment_2
+    cd food_truck_scenarios # or, cd online_goal_inference
     python eval_AutoToM.py
 
 The analysis code is in `analysis.ipynb` under the folder corresponding to each task.
