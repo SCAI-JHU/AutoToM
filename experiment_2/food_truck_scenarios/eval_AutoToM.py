@@ -79,6 +79,8 @@ def get_story(d):
 {first_action} {second_action}"""
     return story
 
+autotom_final_results = {}
+
 for k, v in data.items():
     d = v
     story = get_story(d)
@@ -132,4 +134,7 @@ for k, v in data.items():
 
     final_probs, model_record = solver.solve()
     init_belief_probs = TimestepInference.init_belief_probs
+    autotom_final_results[k] = (final_probs, init_belief_probs)
     print('episode' + k, 'RESULTS:\n', 'goal_probs =', final_probs, '\ninit_belief_probs =', init_belief_probs)
+
+print("AutoToM final results", autotom_final_results)
