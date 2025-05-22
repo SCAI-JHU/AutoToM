@@ -32,6 +32,7 @@ We propose AutoToM, an automated agent modeling method for scalable, robust, and
     python eval_AutoToM.py
 
 The final results will be printed at the end of the evaluation.
+
 The analysis code is in `analysis.ipynb` under the folder corresponding to each task.
 
 
