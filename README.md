@@ -38,4 +38,4 @@ The analysis code is in `analysis.ipynb` under the folder corresponding to each 
 
 ## Testing AutoToM with customized questions
 
-Please check out ``playground.ipynb``. Simply replace the story and choices with your customized input to see how *AutoToM* discover Bayesian models and conduct inverse planning!
+Please check out ``playground.ipynb``. Simply replace the story and choices with your customized input to see how *AutoToM* discovers agent models and conducts mental inferences!
