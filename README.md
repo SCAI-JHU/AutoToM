@@ -33,9 +33,6 @@ We propose AutoToM, an automated agent modeling method for scalable, robust, and
 
 The analysis code is in `analysis.ipynb` under the folder corresponding to each task.
 
-## Experiment 3: Embodied Assistance
-
-
 
 ## Testing AutoToM with customized questions
 
