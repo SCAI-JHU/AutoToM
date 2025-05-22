@@ -31,6 +31,7 @@ We propose AutoToM, an automated agent modeling method for scalable, robust, and
     cd food_truck_scenarios # or, cd online_goal_inference
     python eval_AutoToM.py
 
+The final results will be printed at the end of the evaluation.
 The analysis code is in `analysis.ipynb` under the folder corresponding to each task.
 
 
