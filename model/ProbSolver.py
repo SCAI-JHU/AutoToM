@@ -335,7 +335,7 @@ class ProblemSolver:
                     self.model_name, f"{self.episode_name}_gt"
                 )
                 if ground_truth_time_variables == None:
-                    print(ground_truth_variable_values_with_time)
+                    # print(ground_truth_variable_values_with_time)
                     ground_truth_time_variables = get_variables_with_time(
                         ground_truth_variable_values_with_time,
                         variable_types,
@@ -649,7 +649,7 @@ class ProblemSolver:
                 else:
                     all_actions.append(val)
 
-        print(all_actions)
+        print('Extracted actions:', all_actions)
 
         if self.model_name == "automated":
             return self.solve_with_automated_model(

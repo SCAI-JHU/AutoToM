@@ -371,7 +371,7 @@ def modify_variables(assigned_model, vars, action="add"):
         if vars == ["Action"]:
             vars.append("Goal")
         for var in vars:
-            print('inside loop', var)
+            # print('inside loop', var)
             assert var not in modified_model
             modified_model.append(var)
         modified_model = sorted(

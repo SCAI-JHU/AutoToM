@@ -130,7 +130,7 @@ def gpt_request_multimodal(
         if hypo:
             cost_of_proposing_hypotheses += cost
             times_of_proposing_hypotheses += 1
-            if times_of_proposing_hypotheses % 10 == 0:
+            if times_of_proposing_hypotheses % 100 == 0:
                 enh_print(
                     f"Accumulated Cost of Proposing Hypotheses: {cost_of_proposing_hypotheses} in {times_of_proposing_hypotheses} times",
                     "red",
@@ -138,7 +138,7 @@ def gpt_request_multimodal(
         else:
             cost_of_information_extracting += cost
             times_of_information_extracting += 1
-            if times_of_information_extracting % 10 == 0:
+            if times_of_information_extracting % 100 == 0:
                 enh_print(
                     f"Accumulated Cost of Extracting Information: {cost_of_information_extracting} in {times_of_information_extracting} times",
                     "red",
@@ -253,7 +253,7 @@ def gpt_request(
     if action_exponent is not None and variable is not None:
         cache_key += f"_{action_exponent}_{variable}"
         
-    if cache_key in cache_data:
+    if cache_key in cache_data and verbose:
         enh_print(f"Using cached response for prompt: {prompt[:50]}...", "yellow")
         return cache_data[cache_key]["response"], cache_data[cache_key]["cost"]
     
@@ -301,7 +301,7 @@ def gpt_request(
         if hypo:
             cost_of_proposing_hypotheses += cost
             times_of_proposing_hypotheses += 1
-            if times_of_proposing_hypotheses % 10 == 0:
+            if times_of_proposing_hypotheses % 100 == 0:
                 enh_print(
                     f"Accumulated Cost of Proposing Hypotheses: {cost_of_proposing_hypotheses} in {times_of_proposing_hypotheses} times",
                     "red",
@@ -309,7 +309,7 @@ def gpt_request(
         else:
             cost_of_information_extracting += cost
             times_of_information_extracting += 1
-            if times_of_information_extracting % 10 == 0:
+            if times_of_information_extracting % 100 == 0:
                 enh_print(
                     f"Accumulated Cost of Extracting Information: {cost_of_information_extracting} in {times_of_information_extracting} times",
                     "red",
@@ -471,7 +471,7 @@ def gpt_request_o3_mini_high(
         if hypo:
             cost_of_proposing_hypotheses += cost
             times_of_proposing_hypotheses += 1
-            if times_of_proposing_hypotheses % 10 == 0:
+            if times_of_proposing_hypotheses % 100 == 0:
                 enh_print(
                     f"Accumulated Cost of Proposing Hypotheses: {cost_of_proposing_hypotheses} in {times_of_proposing_hypotheses} times",
                     "red",
@@ -479,7 +479,7 @@ def gpt_request_o3_mini_high(
         else:
             cost_of_information_extracting += cost
             times_of_information_extracting += 1
-            if times_of_information_extracting % 10 == 0:
+            if times_of_information_extracting % 100 == 0:
                 enh_print(
                     f"Accumulated Cost of Extracting Information: {cost_of_information_extracting} in {times_of_information_extracting} times",
                     "red",

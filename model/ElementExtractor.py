@@ -217,7 +217,7 @@ def hypothesis_generation(
         resp_list[j] = resp
     # print(resp_list)
     # print(res)
-    print(prompt)
+    # print(prompt)
     enh_print(f"Hypotheses proposed for {element_name}\n{resp_list}")
     return resp_list
 

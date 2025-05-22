@@ -88,7 +88,7 @@ class TimeLine:
             prompt = prompt.replace("[bare_actions]", f"{action_sequence}")
             resp, cost = llm_request(prompt, temperature=0.0, model=self.llm)
             action_sequence_wording = get_list_from_str(resp)
-            print(action_sequence_wording)
+            # print('extracted action sequence:', action_sequence_wording)
             if "BigToM" not in self.dataset_name:
                 for i, act in enumerate(action_sequence_wording):
                     with open(

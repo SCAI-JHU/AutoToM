@@ -105,7 +105,7 @@ def infer_last_timestamp(
     rational_agent_statement=False
 ):
     
-    print(previous_actions)
+    # print(previous_actions)
     # Last time stamp --> we want to infer the variable we are interested in with Bayesian Inference
     if isinstance(time_variables, list):
         var_i = time_variables[i]

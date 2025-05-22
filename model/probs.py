@@ -102,7 +102,7 @@ B) Unlikely."""
                 Determine if the following statement is likely: {action_b} is a better immediate action than {action_a}. 
                 A) Likely.
                 B) Unlikely."""
-        print(prompt)
+        # print(prompt)
 
     elif "Action" in variable:
         if "Belief of Goal" in info:  # P(Action | Goal, Belief, Belief of Goal)
@@ -194,7 +194,7 @@ B) Unlikely."""
         cost = usage.prompt_tokens * inp + usage.completion_tokens * op
         cost_of_estimating_likelihood += cost
         times_of_estimating += 1
-        if times_of_estimating % 10 == 0:
+        if times_of_estimating % 100 == 0:
             enh_print(
                 f"Accumulated Cost of Estimating Likelihood: {cost_of_estimating_likelihood} in {times_of_estimating} times",
                 "red",
@@ -225,8 +225,8 @@ B) Unlikely."""
         # clip the values
         if action_exponent is not None and "Action" in variable:
             return math.pow(prob_a, action_exponent)
-
-        print(prompt, "\n", prob_a)
+        if verbose:
+            print(prompt, "\n", prob_a)
         return prob_a
 
 
