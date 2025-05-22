@@ -102,7 +102,7 @@ Output:"""
     enh_print('desire: ' + ans)
     question = f"""Read the story and rate for Andy's initial beliefs. 
 {story}
-What are Andy's initial beliefs about the three trucks in spot B, on a scale of 1 to 7, assuming that Andy is very sure of his beliefs and will not perform unnecessary actions?
+What are Andy's initial beliefs about the truck in spot B, on a scale of 1 to 7, assuming that Andy is very sure of his beliefs and will not perform unnecessary actions?
 You should rate the beliefs retrospectively, based on what Andy thought was in spot B at the beginning of the story.
 Output in the format of [x, y, z], where x, y, z represent the degree to which Andy initially (before making any moves) believes that no truck, a Mexican truck, and a Lebanese truck, respectively, are located in spot B.
 Example Output: [1, 4, 7]. Only output the list and do not include any explanations in the response.
