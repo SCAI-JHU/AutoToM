@@ -861,6 +861,7 @@ def main(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
     utils.set_global_seed(args.seed)
+    probs.set_global_seed(args.seed)
     print(f"Random seed set to: {args.seed}")
     
     dataset_name = args.dataset_name

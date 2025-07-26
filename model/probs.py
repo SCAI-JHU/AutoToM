@@ -7,8 +7,17 @@ from utils import *
 import openai
 import os
 
+# Global variables for cost tracking and seed
+global_seed = 42
+
 cost_of_estimating_likelihood = 0.0
 times_of_estimating = 0
+
+
+def set_global_seed(seed):
+    """Set the global seed for all likelihood estimation requests"""
+    global global_seed
+    global_seed = seed
 
 
 def return_letters(n):
@@ -180,7 +189,7 @@ B) Unlikely."""
             top_p=0,
             top_logprobs=5,
             temperature=0.0,
-            seed=0,
+            seed=global_seed,
             max_tokens=1,
         )
         if model == "gpt-4":
@@ -241,7 +250,7 @@ def get_likelihood_test(prompt, verbose=True):
         top_p=0,
         top_logprobs=5,
         temperature=0.0,
-        seed=0,
+        seed=global_seed,
         max_tokens=1,
     )
 
