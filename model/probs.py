@@ -31,7 +31,7 @@ def get_likelihood(
     info,
     statement,
     dataset_name,
-    model="gpt-4o-2024-11-20",
+    model="gpt-4o",
     verbose=False,
     world_rules=None,
     variable=None,
@@ -56,7 +56,7 @@ def get_likelihood(
 def get_likelihood_general(
     info,
     statement,
-    model="gpt-4o-2024-11-20",
+    model="gpt-4o",
     verbose=False,
     world_rules=None,
     variable=None,
