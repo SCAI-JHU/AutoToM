@@ -1119,17 +1119,23 @@ def save_belief_probs(probs, model_name, episode_name):
     print(f"Probs results saved to {output_file}")
 
 
-def save_metrics(metrics, model_name, episode_name, back_inference, reduce_hypos):
+def save_metrics(metrics, model_name, episode_name, back_inference, reduce_hypos, seed=None):
 
     output_folder = "../results/metrics"
-    base_file_name = f"{model_name}_{episode_name}_back{int(back_inference)}_reduce{int(reduce_hypos)}_metrics.json"
+    if seed is not None:
+        base_file_name = f"{model_name}_{episode_name}_back{int(back_inference)}_reduce{int(reduce_hypos)}_seed{seed}_metrics.json"
+    else:
+        base_file_name = f"{model_name}_{episode_name}_back{int(back_inference)}_reduce{int(reduce_hypos)}_metrics.json"
     output_file = os.path.join(output_folder, base_file_name)
 
     os.makedirs(output_folder, exist_ok=True)
 
     count = 1
     while os.path.exists(output_file):
-        new_file_name = f"{base_file_name}_{count}.json"
+        if seed is not None:
+            new_file_name = f"{model_name}_{episode_name}_back{int(back_inference)}_reduce{int(reduce_hypos)}_seed{seed}_metrics_{count}.json"
+        else:
+            new_file_name = f"{base_file_name}_{count}.json"
         output_file = os.path.join(output_folder, new_file_name)
         count += 1
 
