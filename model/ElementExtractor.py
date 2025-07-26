@@ -1119,17 +1119,23 @@ def save_belief_probs(probs, model_name, episode_name):
     print(f"Probs results saved to {output_file}")
 
 
-def save_metrics(metrics, model_name, episode_name, back_inference, reduce_hypos):
+def save_metrics(metrics, model_name, episode_name, back_inference, reduce_hypos, seed=None):
 
     output_folder = "../results/metrics"
-    base_file_name = f"{model_name}_{episode_name}_back{int(back_inference)}_reduce{int(reduce_hypos)}_metrics.json"
+    if seed is not None:
+        base_file_name = f"{model_name}_{episode_name}_back{int(back_inference)}_reduce{int(reduce_hypos)}_seed{seed}_metrics.json"
+    else:
+        base_file_name = f"{model_name}_{episode_name}_back{int(back_inference)}_reduce{int(reduce_hypos)}_metrics.json"
     output_file = os.path.join(output_folder, base_file_name)
 
     os.makedirs(output_folder, exist_ok=True)
 
     count = 1
     while os.path.exists(output_file):
-        new_file_name = f"{base_file_name}_{count}.json"
+        if seed is not None:
+            new_file_name = f"{model_name}_{episode_name}_back{int(back_inference)}_reduce{int(reduce_hypos)}_seed{seed}_metrics_{count}.json"
+        else:
+            new_file_name = f"{base_file_name}_{count}.json"
         output_file = os.path.join(output_folder, new_file_name)
         count += 1
 
@@ -1194,8 +1200,8 @@ def save_ipomdp_intermediate_story(story, question, choice, model_name, episode_
         writer.writerow(res_dict)
 
 
-def load_estimation_dict(dataset_name):
-    file_name = f"../results/estimation_dicts/{dataset_name}.json"
+def load_estimation_dict(dataset_name, seed):
+    file_name = f"../results/estimation_dicts/{dataset_name}_seed{seed}.json"
     if not os.path.isfile(file_name):
         return {}
     with open(file_name, mode="r") as file:
@@ -1203,10 +1209,10 @@ def load_estimation_dict(dataset_name):
     return res
 
 
-def save_estimation_dict(dataset_name, dict):
+def save_estimation_dict(dataset_name, dict, seed):
     folder = "../results/estimation_dicts/"
     os.makedirs(folder, exist_ok=True)
-    file_name = f"../results/estimation_dicts/{dataset_name}.json"
+    file_name = f"../results/estimation_dicts/{dataset_name}_seed{seed}.json"
     with open(file_name, mode="w") as file:
         json.dump(dict, file, indent=2)
 

@@ -22,7 +22,7 @@ def get_likelihood(
     info,
     statement,
     dataset_name,
-    model="gpt-4o",
+    model="gpt-4o-2024-11-20",
     verbose=False,
     world_rules=None,
     variable=None,
@@ -47,7 +47,7 @@ def get_likelihood(
 def get_likelihood_general(
     info,
     statement,
-    model="gpt-4o",
+    model="gpt-4o-2024-11-20",
     verbose=False,
     world_rules=None,
     variable=None,
@@ -132,8 +132,8 @@ B) Unlikely."""
                 rational_statement = ""
             prompt = f"""Determine if the statement is likely, respond with only either A or B.
 {info}
-Here is a statement of {inf_agent}'s action. The belief stands for {inf_agent}'s current belief. {inf_agent} is likely to act according to goal and belief concerning certain objects (the wording for objects must be same. You should ignore the correlation of different objects. e.g., plate and apple are two different objects.) Notice that {inf_agent}'s belief does not represent the goal.
-When belief and goal are irrelevant, and action is driven by goal, it's likely. When belief and goal are relevant (about exactly the same object) and they contradict with action, it's unlikely.{rational_statement}
+Here is a statement of {inf_agent}'s action. The belief stands for {inf_agent}'s current belief which is true. {inf_agent} is likely to act according to goal and belief concerning certain objects (the wording for objects must be same. You should ignore the correlation of different objects. e.g., plate and apple are two different objects.) Notice that {inf_agent}'s belief does not represent the goal.
+When belief and goal are irrelevant, and action is directly driven by goal, it's likely. When belief and goal are relevant (about exactly the same object) and they contradict (or irrelevant) with action, it's unlikely.{rational_statement}
 Determine if the following statement is likely: {statement}
 A) Likely.
 B) Unlikely."""
@@ -225,8 +225,8 @@ B) Unlikely."""
         # clip the values
         if action_exponent is not None and "Action" in variable:
             return math.pow(prob_a, action_exponent)
-        if verbose:
-            print(prompt, "\n", prob_a)
+        # if verbose:
+        print(prompt, "\n", prob_a)
         return prob_a
 
 

@@ -14,6 +14,7 @@ import TimestepInference
 import ProblemParser
 import Nested
 import argparse
+import random
 
 """
     Creates a ProblemSolver class that will setup and answer the questions in the dataset 
@@ -69,7 +70,8 @@ class ProblemSolver:
         init_belief=False,
         use_all_timesteps=False,
         predefined_belief_hypotheses=None,
-        rational_agent_statement=False
+        rational_agent_statement=False,
+        seed=42
     ):
         self.world_rules = (
             ""  # we do not use this value and keep it constant for all datasets
@@ -108,6 +110,7 @@ class ProblemSolver:
         self.use_all_timesteps = use_all_timesteps
         self.predefined_belief_hypotheses = predefined_belief_hypotheses
         self.recursion_depth = recursion_depth
+        self.seed = seed
 
         self.nested_timeline_before = nested_timeline_before
         self.nested_time_variables_before = nested_time_variables_before
@@ -635,7 +638,7 @@ class ProblemSolver:
         previous_belief = Variable("Previous Belief", True, False, ["None"], np.ones(1))
         all_probs = []
 
-        self.estimation_dictionary = load_estimation_dict(self.dataset_name)
+        self.estimation_dictionary = load_estimation_dict(self.dataset_name, self.seed)
         results = None
         action_likelihood_goal = {}
 
@@ -854,6 +857,12 @@ def main(args):
     Returns:
         Prints the number of questions correct and the correctness of each question
     """
+    # Set random seeds for reproducibility
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    utils.set_global_seed(args.seed)
+    print(f"Random seed set to: {args.seed}")
+    
     dataset_name = args.dataset_name
     data = load_full_dataset(args.dataset_name)
     # data = load_dataset(dataset_name)
@@ -897,8 +906,8 @@ def main(args):
     costs = []
     apis = []
     for i, d in enumerate(data):
-        # if i < 300:
-        #     continue
+        if i < args.start_num:
+            continue
         print(f"Question {i}")
         states, actions, video_id = None, None, None
         if "MuMa" in dataset_name:
@@ -943,7 +952,8 @@ def main(args):
             prev_hyp=None,
             no_model_adjustment=no_model_adjustment,
             recursion_depth=order,
-            use_all_timesteps=use_all_timesteps
+            use_all_timesteps=use_all_timesteps,
+            seed=args.seed
         )
 
         final_probs, model_record = solver.solve()
@@ -961,7 +971,7 @@ def main(args):
             + utils.times_of_proposing_hypotheses
         )
 
-        save_estimation_dict(dataset_name, solver.estimation_dictionary)
+        save_estimation_dict(dataset_name, solver.estimation_dictionary, args.seed)
 
         if final_probs == None:
             print("The assigned model cannot answer the question.")
@@ -1003,6 +1013,7 @@ def main(args):
             solver.episode_name,
             solver.back_inference,
             solver.reduce_hypotheses,
+            args.seed,
         )
         costs.append(end_cost)
         apis.append(end_api)
@@ -1106,7 +1117,13 @@ if __name__ == "__main__":
         action="store_true",
         help="Used to run experiments where all timesteps in the story are considered."
     )
+    parser.add_argument(
+        "--start_num",
+        default=0,
+        type=int
+    )
     parser.add_argument("--nested", default=None, help="If None, the model will figure out the order itself.")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
     args = parser.parse_args()
     args.assigned_model = eval(args.assigned_model)
     args.back_inference = not args.no_back_inference

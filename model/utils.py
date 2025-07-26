@@ -14,6 +14,21 @@ import torch
 import time
 import glob
 
+# Global variables for cost tracking and seed
+global_seed = 42
+
+cost_of_information_extracting = 0.0
+cost_of_proposing_hypotheses = 0.0
+times_of_information_extracting = 0
+times_of_proposing_hypotheses = 0
+
+
+def set_global_seed(seed):
+    """Set the global seed for all LLM requests"""
+    global global_seed
+    global_seed = seed
+
+
 def form_NLD(p, val):
     if "State" in p:
         return "State"
@@ -74,12 +89,6 @@ def encode_image(image_path):
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
 
-cost_of_information_extracting = 0.0
-cost_of_proposing_hypotheses = 0.0
-times_of_information_extracting = 0
-times_of_proposing_hypotheses = 0
-
-
 def gpt_request_multimodal(
     prompt,
     base64_images,
@@ -88,11 +97,16 @@ def gpt_request_multimodal(
     model="gpt-4o",
     hypo=False,
     verbose=False,
+    seed=None,
 ):
     global cost_of_information_extracting
     global cost_of_proposing_hypotheses
     global times_of_information_extracting
     global times_of_proposing_hypotheses
+    global global_seed
+    
+    if seed is None:
+        seed = global_seed
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     try:
         content_list = [
@@ -117,7 +131,7 @@ def gpt_request_multimodal(
             messages=[{"role": "user", "content": content_list}],
             temperature=temperature,
             max_tokens=max_tokens,
-            seed=42,
+            seed=seed,
         )
         if model == "gpt-4":
             inp, op = 30 / 1000000, 60 / 1000000
@@ -154,8 +168,13 @@ def gpt_request_multimodal(
 
 
 def llm_request(
-    prompt, temperature=0.0, max_tokens=3000, model="gpt-4o", hypo=False, verbose=False
+    prompt, temperature=0.0, max_tokens=3000, model="gpt-4o-2024-11-20", hypo=False, verbose=False, seed=None
 ):
+    global global_seed
+    
+    if seed is None:
+        seed = global_seed
+        
     if "gpt" in model:
         return gpt_request(
             prompt,
@@ -164,6 +183,7 @@ def llm_request(
             model="gpt-4o",
             hypo=hypo,
             verbose=verbose,
+            seed=seed,
         )
     elif "llama" in model:
         return llama_request(prompt, max_tokens=200)
@@ -212,11 +232,278 @@ def llama_request(prompt, max_tokens=200):
     return generated_text, cost
 
 
-def gpt_request(
+def gemini_request(
     prompt,
     temperature=0.0,
-    max_tokens=3000,
-    model="gpt-4o",
+    max_tokens=300000,
+    model="gemini-2.0-flash-thinking-exp-01-21",
+    hypo=False,
+    verbose=False,
+    message_role="user",
+    seed=None,
+    logprobs=False,
+    top_p=0,
+    top_logprobs=5,
+    action_exponent=None,
+    variable=None,
+):
+    global cost_of_information_extracting
+    global cost_of_proposing_hypotheses
+    global times_of_information_extracting
+    global times_of_proposing_hypotheses
+    global global_seed
+    
+    if seed is None:
+        seed = global_seed
+    
+    
+    cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    
+    
+    cache_file = os.path.join(cache_dir, "prompt_response_cache.json")
+    
+    cache_data = {}
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, 'r', encoding='utf-8') as f:
+                cache_data = json.load(f)
+        except Exception as e:
+            enh_print(f"Error reading cache: {e}", "red")
+    
+    cache_key = f"{prompt}_{model}_{temperature}_{max_tokens}_{seed}_{logprobs}"
+    if logprobs:
+        cache_key += f"_{top_p}_{top_logprobs}"
+    if action_exponent is not None and variable is not None:
+        cache_key += f"_{action_exponent}_{variable}"
+        
+    if cache_key in cache_data and verbose:
+        enh_print(f"Using cached response for prompt: {prompt[:50]}...", "yellow")
+        return cache_data[cache_key]["response"], cache_data[cache_key]["cost"]
+    
+    client = OpenAI(api_key=os.environ["GEMINI_API_KEY"], base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
+    try:
+        # getting the liklihood with gpt
+        if logprobs:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": message_role,
+                        "content": prompt,
+                    },
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=top_p,
+                top_logprobs=top_logprobs,
+                logprobs=logprobs,
+            )
+
+        else:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": message_role,
+                        "content": prompt,
+                    },
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        if model == "gpt-4":
+            inp, op = 30 / 1000000, 60 / 1000000
+        elif model == "gpt-4o":
+            inp, op = 5 / 1000000, 15 / 1000000
+        elif model == "gpt-3.5-turbo":
+            inp, op = 0.5 / 1000000, 1.5 / 1000000
+        else:
+            inp, op = 1, 1
+        usage = response.usage
+        cost = usage.prompt_tokens * inp + usage.completion_tokens * op
+        if hypo:
+            cost_of_proposing_hypotheses += cost
+            times_of_proposing_hypotheses += 1
+            if times_of_proposing_hypotheses % 100 == 0:
+                enh_print(
+                    f"Accumulated Cost of Proposing Hypotheses: {cost_of_proposing_hypotheses} in {times_of_proposing_hypotheses} times",
+                    "red",
+                )
+        else:
+            cost_of_information_extracting += cost
+            times_of_information_extracting += 1
+            if times_of_information_extracting % 100 == 0:
+                enh_print(
+                    f"Accumulated Cost of Extracting Information: {cost_of_information_extracting} in {times_of_information_extracting} times",
+                    "red",
+                )
+        # if verbose:
+        # enh_print(prompt)
+        # enh_print(response.choices[0].message.content.strip(), color="red")
+        # getting the liklihood
+        enh_print(prompt, 'red')
+        enh_print(response)
+        result = response.choices[0].message.content.strip()
+        
+        cache_data[cache_key] = {
+            "response": result,
+            "cost": cost,
+            "timestamp": time.time()
+        }
+        
+        try:
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                json.dump(cache_data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            enh_print(f"Error writing cache: {e}", "red")
+        
+        return result, cost
+    except Exception as e:
+        print(f"retrying due to an error {e}")
+        time.sleep(20)
+        return gemini_request(prompt, temperature, max_tokens, model, hypo, verbose)
+
+
+def gemini_request_25pro(
+    prompt,
+    temperature=0.0,
+    max_tokens=300000,
+    model="gemini-2.5-pro-preview-03-25",
+    hypo=False,
+    verbose=False,
+    message_role="user",
+    seed=None,
+    logprobs=False,
+    top_p=0,
+    top_logprobs=5,
+    action_exponent=None,
+    variable=None,
+):
+    global cost_of_information_extracting
+    global cost_of_proposing_hypotheses
+    global times_of_information_extracting
+    global times_of_proposing_hypotheses
+    global global_seed
+
+    if seed is None:
+        seed = global_seed
+    
+    
+    cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    
+    
+    cache_file = os.path.join(cache_dir, "prompt_response_cache.json")
+    
+    cache_data = {}
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, 'r', encoding='utf-8') as f:
+                cache_data = json.load(f)
+        except Exception as e:
+            enh_print(f"Error reading cache: {e}", "red")
+    
+    print(model)
+    cache_key = f"{prompt}_{model}_{temperature}_{max_tokens}_{seed}_{logprobs}"
+    if logprobs:
+        cache_key += f"_{top_p}_{top_logprobs}"
+    if action_exponent is not None and variable is not None:
+        cache_key += f"_{action_exponent}_{variable}"
+        
+    if cache_key in cache_data and verbose:
+        enh_print(f"Using cached response for prompt: {prompt[:50]}...", "yellow")
+        return cache_data[cache_key]["response"], cache_data[cache_key]["cost"]
+    
+    client = OpenAI(api_key=os.environ["GEMINI_API_KEY"], base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
+    try:
+        # getting the liklihood with gpt
+        if logprobs:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": message_role,
+                        "content": prompt,
+                    },
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=top_p,
+                top_logprobs=top_logprobs,
+                logprobs=logprobs,
+            )
+
+        else:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": message_role,
+                        "content": prompt,
+                    },
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        if model == "gpt-4":
+            inp, op = 30 / 1000000, 60 / 1000000
+        elif model == "gpt-4o":
+            inp, op = 5 / 1000000, 15 / 1000000
+        elif model == "gpt-3.5-turbo":
+            inp, op = 0.5 / 1000000, 1.5 / 1000000
+        else:
+            inp, op = 1, 1
+        usage = response.usage
+        cost = usage.prompt_tokens * inp + usage.completion_tokens * op
+        if hypo:
+            cost_of_proposing_hypotheses += cost
+            times_of_proposing_hypotheses += 1
+            if times_of_proposing_hypotheses % 100 == 0:
+                enh_print(
+                    f"Accumulated Cost of Proposing Hypotheses: {cost_of_proposing_hypotheses} in {times_of_proposing_hypotheses} times",
+                    "red",
+                )
+        else:
+            cost_of_information_extracting += cost
+            times_of_information_extracting += 1
+            if times_of_information_extracting % 100 == 0:
+                enh_print(
+                    f"Accumulated Cost of Extracting Information: {cost_of_information_extracting} in {times_of_information_extracting} times",
+                    "red",
+                )
+        # if verbose:
+        # enh_print(prompt)
+        # enh_print(response.choices[0].message.content.strip(), color="red")
+        # getting the liklihood
+        enh_print(prompt, 'red')
+        enh_print(response)
+        result = response.choices[0].message.content.strip()
+        
+        cache_data[cache_key] = {
+            "response": result,
+            "cost": cost,
+            "timestamp": time.time()
+        }
+        
+        try:
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                json.dump(cache_data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            enh_print(f"Error writing cache: {e}", "red")
+        
+        return result, cost
+    except Exception as e:
+        print(f"retrying due to an error {e}")
+        time.sleep(20)
+        return gemini_request_25pro(prompt, temperature, max_tokens, model, hypo, verbose)
+
+
+def gemini_request_25flash(
+    prompt,
+    temperature=0.0,
+    max_tokens=300000,
+    model="gemini-2.5-flash-preview-04-17",
     hypo=False,
     verbose=False,
     message_role="user",
@@ -231,6 +518,139 @@ def gpt_request(
     global cost_of_proposing_hypotheses
     global times_of_information_extracting
     global times_of_proposing_hypotheses
+
+    cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    
+    
+    cache_file = os.path.join(cache_dir, "prompt_response_cache.json")
+    
+    cache_data = {}
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, 'r', encoding='utf-8') as f:
+                cache_data = json.load(f)
+        except Exception as e:
+            enh_print(f"Error reading cache: {e}", "red")
+    
+    print(model)
+    cache_key = f"{prompt}_{model}_{temperature}_{max_tokens}_{seed}_{logprobs}"
+    if logprobs:
+        cache_key += f"_{top_p}_{top_logprobs}"
+    if action_exponent is not None and variable is not None:
+        cache_key += f"_{action_exponent}_{variable}"
+        
+    if cache_key in cache_data and verbose:
+        enh_print(f"Using cached response for prompt: {prompt[:50]}...", "yellow")
+        return cache_data[cache_key]["response"], cache_data[cache_key]["cost"]
+    
+    client = OpenAI(api_key=os.environ["GEMINI_API_KEY"], base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
+    try:
+        # getting the liklihood with gpt
+        if logprobs:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": message_role,
+                        "content": prompt,
+                    },
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=top_p,
+                top_logprobs=top_logprobs,
+                logprobs=logprobs,
+            )
+
+        else:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": message_role,
+                        "content": prompt,
+                    },
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        if model == "gpt-4":
+            inp, op = 30 / 1000000, 60 / 1000000
+        elif model == "gpt-4o":
+            inp, op = 5 / 1000000, 15 / 1000000
+        elif model == "gpt-3.5-turbo":
+            inp, op = 0.5 / 1000000, 1.5 / 1000000
+        else:
+            inp, op = 1, 1
+        usage = response.usage
+        cost = usage.prompt_tokens * inp + usage.completion_tokens * op
+        if hypo:
+            cost_of_proposing_hypotheses += cost
+            times_of_proposing_hypotheses += 1
+            if times_of_proposing_hypotheses % 100 == 0:
+                enh_print(
+                    f"Accumulated Cost of Proposing Hypotheses: {cost_of_proposing_hypotheses} in {times_of_proposing_hypotheses} times",
+                    "red",
+                )
+        else:
+            cost_of_information_extracting += cost
+            times_of_information_extracting += 1
+            if times_of_information_extracting % 100 == 0:
+                enh_print(
+                    f"Accumulated Cost of Extracting Information: {cost_of_information_extracting} in {times_of_information_extracting} times",
+                    "red",
+                )
+        # if verbose:
+        # enh_print(prompt)
+        # enh_print(response.choices[0].message.content.strip(), color="red")
+        # getting the liklihood
+        enh_print(prompt, 'red')
+        enh_print(response)
+        result = response.choices[0].message.content.strip()
+        
+        cache_data[cache_key] = {
+            "response": result,
+            "cost": cost,
+            "timestamp": time.time()
+        }
+        
+        try:
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                json.dump(cache_data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            enh_print(f"Error writing cache: {e}", "red")
+        
+        return result, cost
+    except Exception as e:
+        print(f"retrying due to an error {e}")
+        time.sleep(20)
+        return gemini_request_25flash(prompt, temperature, max_tokens, model, hypo, verbose)
+
+
+def gpt_request(
+    prompt,
+    temperature=0.0,
+    max_tokens=3000,
+    model="gpt-4o",
+    hypo=False,
+    verbose=False,
+    message_role="user",
+    seed=None,
+    logprobs=False,
+    top_p=0,
+    top_logprobs=5,
+    action_exponent=None,
+    variable=None,
+):
+    global cost_of_information_extracting
+    global cost_of_proposing_hypotheses
+    global times_of_information_extracting
+    global times_of_proposing_hypotheses
+    global global_seed
+    
+    if seed is None:
+        seed = global_seed
     
     
     cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../cache")
@@ -376,7 +796,7 @@ def gpt_request(
     except Exception as e:
         print(f"retrying due to an error {e}")
         time.sleep(20)
-        return gpt_request(prompt, temperature, max_tokens, model, hypo, verbose)
+        return gpt_request(prompt, temperature, max_tokens, model, hypo, verbose, message_role, seed, logprobs, top_p, top_logprobs, action_exponent, variable)
 
 def gpt_request_o3_mini_high(
     prompt,
@@ -386,17 +806,21 @@ def gpt_request_o3_mini_high(
     hypo=False,
     verbose=False,
     message_role="user",
-    seed=42,
+    seed=None,
     logprobs=False,
     top_p=0,
     top_logprobs=5,
     action_exponent=None,
     variable=None,
 ):
+    global global_seed
     global cost_of_information_extracting
     global cost_of_proposing_hypotheses
     global times_of_information_extracting
     global times_of_proposing_hypotheses
+    
+    if seed is None:
+        seed = global_seed
     
     
     cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../cache")
@@ -546,7 +970,7 @@ def gpt_request_o3_mini_high(
     except Exception as e:
         print(f"retrying due to an error {e}")
         time.sleep(20)
-        return gpt_request_o3_mini_high(prompt, temperature, max_tokens, model, hypo, verbose)
+        return gpt_request_o3_mini_high(prompt, temperature, max_tokens, model, hypo, verbose, message_role, seed, logprobs, top_p, top_logprobs, action_exponent, variable)
 
 
 def enh_print(x, color="green"):
@@ -570,8 +994,12 @@ def return_letters(n):
 accumulated_cost_logits = 0
 
 
-def get_logits(info, question, choices, model="gpt-4o"):
+def get_logits(info, question, choices, model="gpt-4o", seed=None):
     global accumulated_cost_logits
+    global global_seed
+    
+    if seed is None:
+        seed = global_seed
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     inst = f"""Answer the question based on the story.
 Story: {info}
@@ -596,7 +1024,7 @@ Question: {question}
             max_tokens=1,
             logprobs=True,
             top_logprobs=5,
-            seed=42,
+            seed=seed,
         )
         resp_json = response.model_dump_json(indent=2)
         resp_dict = json.loads(resp_json)
@@ -624,7 +1052,7 @@ Question: {question}
     except Exception as e:
         print(f"retrying due to an error {e}")
         time.sleep(20)
-        return get_logits(info, question, choices, model)
+        return get_logits(info, question, choices, model, seed)
 
 def contains_utterance(self, data_list_1, data_list_2):
     if data_list_2 == None:
