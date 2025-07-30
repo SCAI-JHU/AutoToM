@@ -32,7 +32,7 @@ def get_likelihood(
     info,
     statement,
     dataset_name,
-    model="gpt-4o",
+    model=os.getenv("BACKEND_MODEL", "gpt-4o"),
     verbose=False,
     world_rules=None,
     variable=None,
@@ -57,7 +57,7 @@ def get_likelihood(
 def get_likelihood_general(
     info,
     statement,
-    model="gpt-4o",
+    model=os.getenv("BACKEND_MODEL", "gpt-4o"),
     verbose=False,
     world_rules=None,
     variable=None,
@@ -177,7 +177,7 @@ B) Unlikely."""
 Determine if the following statement is likely: {statement}
 A) Likely.
 B) Unlikely."""
-    if "gpt" in model:
+    if "gpt" in model or "deepseek" in model:
         model = os.getenv("LOGPROBS_MODEL", "gpt-4o")
         endpoint = os.getenv("LOGPROBS_ENDPOINT", "openai")
 
@@ -282,7 +282,7 @@ def get_likelihood_test(prompt, verbose=True):
         messages=[
             {"role": "system", "content": prompt},
         ],
-        model="gpt-4o",
+        model=os.getenv("BACKEND_MODEL", "gpt-4o"),
         logprobs=True,
         top_p=0,
         top_logprobs=5,

@@ -55,7 +55,7 @@ def natural_lang_translation(text):
 Record:{text}
 Translate into natural language explanation in several words.
 """
-    result, _ = llm_request(prompt, temperature=0.0, model="gpt-4o")
+    result, _ = llm_request(prompt, temperature=0.0, model=os.getenv("BACKEND_MODEL", "gpt-4o"))
     print(result)
     return result
 
@@ -94,7 +94,7 @@ def gpt_request_multimodal(
     base64_images,
     temperature=0.0,
     max_tokens=3000,
-    model="gpt-4o",
+    model=os.getenv("BACKEND_MODEL", "gpt-4o"),
     hypo=False,
     verbose=False,
     seed=None,
@@ -175,12 +175,12 @@ def llm_request(
     if seed is None:
         seed = global_seed
         
-    if "gpt" in model:
+    if "gpt" in model or "deepseek" in model:
         return gpt_request(
             prompt,
             temperature=temperature,
             max_tokens=max_tokens,
-            model="gpt-4o",
+            model=os.getenv("BACKEND_MODEL", "gpt-4o"),
             hypo=hypo,
             verbose=verbose,
             seed=seed,
@@ -632,7 +632,7 @@ def gpt_request(
     prompt,
     temperature=0.0,
     max_tokens=3000,
-    model="gpt-4o",
+    model=os.getenv("BACKEND_MODEL", "gpt-4o"),
     hypo=False,
     verbose=False,
     message_role="user",
@@ -716,6 +716,12 @@ def gpt_request(
             inp, op = 5 / 1000000, 15 / 1000000
         elif model == "gpt-3.5-turbo":
             inp, op = 0.5 / 1000000, 1.5 / 1000000
+        elif model == "qwen/qwen3-235b-a22b-2507":
+            # https://openrouter.ai/qwen/qwen3-235b-a22b-2507
+            inp, op = 0.12e-6, 0.59e-6
+        elif model == "deepseek/deepseek-chat-v3-0324":
+            # https://openrouter.ai/deepseek/deepseek-chat-v3-0324
+            inp, op = 0.25e-6, 0.85e-6
         usage = response.usage
         cost = usage.prompt_tokens * inp + usage.completion_tokens * op
         if hypo:
@@ -802,7 +808,7 @@ def gpt_request_o3_mini_high(
     prompt,
     temperature=0.0,
     max_tokens=3000,
-    model="gpt-4o",
+    model=os.getenv("BACKEND_MODEL", "gpt-4o"),
     hypo=False,
     verbose=False,
     message_role="user",
@@ -888,6 +894,12 @@ def gpt_request_o3_mini_high(
             inp, op = 5 / 1000000, 15 / 1000000
         elif model == "gpt-3.5-turbo":
             inp, op = 0.5 / 1000000, 1.5 / 1000000
+        elif model == "qwen/qwen3-235b-a22b-2507":
+            # https://openrouter.ai/qwen/qwen3-235b-a22b-2507
+            inp, op = 0.12e-6, 0.59e-6
+        elif model == "deepseek/deepseek-chat-v3-0324":
+            # https://openrouter.ai/deepseek/deepseek-chat-v3-0324
+            inp, op = 0.25e-6, 0.85e-6
         else:
             inp, op = 0, 0
         usage = response.usage
@@ -994,7 +1006,7 @@ def return_letters(n):
 accumulated_cost_logits = 0
 
 
-def get_logits(info, question, choices, model="gpt-4o", seed=None):
+def get_logits(info, question, choices, model=os.getenv("BACKEND_MODEL", "gpt-4o"), seed=None):
     global accumulated_cost_logits
     global global_seed
     
@@ -1038,6 +1050,12 @@ Question: {question}
             inp, op = 5 / 1000000, 15 / 1000000
         elif model == "gpt-3.5-turbo":
             inp, op = 0.5 / 1000000, 1.5 / 1000000
+        elif model == "qwen/qwen3-235b-a22b-2507":
+            # https://openrouter.ai/qwen/qwen3-235b-a22b-2507
+            inp, op = 0.12e-6, 0.59e-6
+        elif model == "deepseek/deepseek-chat-v3-0324":
+            # https://openrouter.ai/deepseek/deepseek-chat-v3-0324
+            inp, op = 0.25e-6, 0.85e-6
         usage = response.usage
         cost = usage.prompt_tokens * inp + usage.completion_tokens * op
 

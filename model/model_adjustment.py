@@ -1,6 +1,7 @@
 import pandas as pd
 from scipy.stats import entropy
-import openai
+from openai import OpenAI
+import os
 import copy
 
 benefit_threshold = 0.02
@@ -249,8 +250,9 @@ def Bayesian_inference(start_timestep, all_timesteps, verbose, time_variables, p
 
 
 def gpt_call(prompt):
-    response = openai.chat.completions.create(
-        model="gpt-4o",
+    client = OpenAI()
+    response = client.chat.completions.create(
+        model=os.getenv("BACKEND_MODEL", "gpt-4o"),
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt},

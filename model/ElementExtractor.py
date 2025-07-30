@@ -197,20 +197,26 @@ def hypothesis_generation(
         prompt = prompt.replace("align", "aligns")
         prompt = prompt.replace('["aaa.", "bbb.", ...]', '["aaa."]')
 
-    resp, cost = llm_request(prompt, temperature=0.0, hypo=True, model=llm)
+    for ith_retry in range(5):
+        try:
+            resp, cost = llm_request(prompt, temperature=0.0, hypo=True, model=llm)
 
-    if "\n" in resp:
-        resp = resp.split("\n")[-1]
-    if resp[0] != "[" and "[" in resp:
-        resp = "[" + resp.split("[")[1]
-    elif resp[-1] != "]" and "]" in resp:
-        resp = resp.split("]")[0] + "]"
-    if '"' not in resp:
-        resp = resp.split("[")[1]
-        resp = resp.split("]")[0]
-        resp = f'["{resp}"]'
+            if "\n" in resp:
+                resp = resp.split("\n")[-1]
+            if resp[0] != "[" and "[" in resp:
+                resp = "[" + resp.split("[")[1]
+            elif resp[-1] != "]" and "]" in resp:
+                resp = resp.split("]")[0] + "]"
+            if '"' not in resp:
+                resp = resp.split("[")[1]
+                resp = resp.split("]")[0]
+                resp = f'["{resp}"]'
 
-    resp_list = eval(resp)
+            resp_list = eval(resp)
+            break
+        except Exception as e:
+            print(f"[{ith_retry+1}/5] Error in hypothesis generation: {e}")
+
     for j, resp in enumerate(resp_list):
         for i in range(K):
             resp = resp.replace(f"Hypothesis_{i+1}: ", "")
@@ -353,7 +359,7 @@ def verify_variable(infer_variable, sentence):
         prompt_template = prompt_file.read().strip()
     prompt = prompt_template.replace("[Sentence]", f"{sentence}")
     prompt = prompt.replace("[Variable]", infer_variable)
-    resp, cost = llm_request(prompt, temperature=0.0, model="gpt-4o")
+    resp, cost = llm_request(prompt, temperature=0.0, model=os.getenv("BACKEND_MODEL", "gpt-4o"))
     return resp
 
 def verify_hypo(gt_hypo, gen_hypo):
@@ -363,7 +369,7 @@ def verify_hypo(gt_hypo, gen_hypo):
         prompt_template = prompt_file.read().strip()
     prompt = prompt_template.replace("[Sentence1]", f"{gt_hypo}")
     prompt = prompt.replace("[Sentence2]", f"{gen_hypo}")
-    resp, cost = llm_request(prompt, temperature=0.0, model="gpt-4o")
+    resp, cost = llm_request(prompt, temperature=0.0, model=os.getenv("BACKEND_MODEL", "gpt-4o"))
     # enh_print(prompt + resp)
     if "A" in resp[:3]:
         return gt_hypo

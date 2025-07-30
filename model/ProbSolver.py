@@ -15,6 +15,7 @@ import ProblemParser
 import Nested
 import argparse
 import random
+import os
 
 """
     Creates a ProblemSolver class that will setup and answer the questions in the dataset 
@@ -939,7 +940,8 @@ def main(args):
             assigned_model=assigned_model,
             model_name=model_name,
             episode_name=f"{dataset_name}_{i}",
-            llm=llm,
+            llm=os.getenv("BACKEND_MODEL", "gpt-4o"),
+            hypo_llm=os.getenv("BACKEND_MODEL", "gpt-4o"),
             verbose=False,
             dataset_name=dataset_name,
             hypo_method=hypo_method,
