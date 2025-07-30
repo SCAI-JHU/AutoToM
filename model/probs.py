@@ -177,12 +177,13 @@ B) Unlikely."""
 Determine if the following statement is likely: {statement}
 A) Likely.
 B) Unlikely."""
-    if "gpt" in model or "deepseek" in model:
+        
+    global cost_of_estimating_likelihood
+    global times_of_estimating
+
+    if "gpt" in model or "deepseek/deepseek" in model or "qwen/qwen" in model:
         model = os.getenv("LOGPROBS_MODEL", "gpt-4o")
         endpoint = os.getenv("LOGPROBS_ENDPOINT", "openai")
-
-        global cost_of_estimating_likelihood
-        global times_of_estimating
 
         if endpoint == "openrouter":
             response = openrouter_request(prompt, model, global_seed)
@@ -235,6 +236,9 @@ B) Unlikely."""
         elif model == "deepseek/deepseek-chat-v3-0324":
             # https://openrouter.ai/deepseek/deepseek-chat-v3-0324
             inp, op = 0.25e-6, 0.85e-6
+        elif model == "google/gemini-2.5-flash":
+            # https://openrouter.ai/google/gemini-2.5-flash
+            inp, op = 0.3e-6, 2.5e-6
 
         usage = response.usage
         cost = usage.prompt_tokens * inp + usage.completion_tokens * op
@@ -274,6 +278,33 @@ B) Unlikely."""
         # if verbose:
         print(prompt, "\n", prob_a)
         return prob_a
+
+    elif model == "google/gemini-2.5-flash":
+
+        client = OpenAI()
+        response = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": prompt},
+            ],
+            model=model,
+            reasoning_effort=None,
+            temperature=0.0,
+            seed=global_seed,
+            max_tokens=1,
+        )
+
+        # https://openrouter.ai/google/gemini-2.5-flash
+        inp, op = 0.3e-6, 2.5e-6
+        usage = response.usage
+        cost = usage.prompt_tokens * inp + usage.completion_tokens * op
+        cost_of_estimating_likelihood += cost
+
+        times_of_estimating += 1
+
+        if response.choices[0].message.content == "A":
+            return 0.9
+        else:
+            return 0.1
 
 
 def get_likelihood_test(prompt, verbose=True):

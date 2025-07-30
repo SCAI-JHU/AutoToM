@@ -175,7 +175,7 @@ def llm_request(
     if seed is None:
         seed = global_seed
         
-    if "gpt" in model or "deepseek" in model:
+    if "gpt" in model or "deepseek/deepseek" or "qwen/qwen" in model or "google/gemini" in model:
         return gpt_request(
             prompt,
             temperature=temperature,
@@ -722,6 +722,9 @@ def gpt_request(
         elif model == "deepseek/deepseek-chat-v3-0324":
             # https://openrouter.ai/deepseek/deepseek-chat-v3-0324
             inp, op = 0.25e-6, 0.85e-6
+        elif model == "google/gemini-2.5-flash":
+            # https://openrouter.ai/google/gemini-2.5-flash
+            inp, op = 0.3e-6, 2.5e-6
         usage = response.usage
         cost = usage.prompt_tokens * inp + usage.completion_tokens * op
         if hypo:
@@ -900,6 +903,9 @@ def gpt_request_o3_mini_high(
         elif model == "deepseek/deepseek-chat-v3-0324":
             # https://openrouter.ai/deepseek/deepseek-chat-v3-0324
             inp, op = 0.25e-6, 0.85e-6
+        elif model == "google/gemini-2.5-flash":
+            # https://openrouter.ai/google/gemini-2.5-flash
+            inp, op = 0.3e-6, 2.5e-6
         else:
             inp, op = 0, 0
         usage = response.usage
@@ -1056,6 +1062,9 @@ Question: {question}
         elif model == "deepseek/deepseek-chat-v3-0324":
             # https://openrouter.ai/deepseek/deepseek-chat-v3-0324
             inp, op = 0.25e-6, 0.85e-6
+        elif model == "google/gemini-2.5-flash":
+            # https://openrouter.ai/google/gemini-2.5-flash
+            inp, op = 0.3e-6, 2.5e-6
         usage = response.usage
         cost = usage.prompt_tokens * inp + usage.completion_tokens * op
 
