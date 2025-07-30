@@ -76,7 +76,8 @@ class LLMBaselineEval:
                         messages=[dict(role="user", content=prompt)],
                         seed=self.seed,
                         temperature=0,
-                        reasoning_effort=None,
+                        # * when using openrouter to call gemini, `reasoning_effort` is None by default, rather than dynamic thinking
+                        # reasoning_effort=None,
                     )
                     duration = time.time() - start_time
                     break
@@ -119,6 +120,7 @@ class LLMBaselineEval:
 
 def main():
     for model_name in [
+        "qwen/qwen3-235b-a22b-2507",
         "deepseek/deepseek-chat-v3-0324",
         "google/gemini-2.5-flash",
     ]:

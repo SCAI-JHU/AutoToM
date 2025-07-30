@@ -197,7 +197,7 @@ def hypothesis_generation(
         prompt = prompt.replace("align", "aligns")
         prompt = prompt.replace('["aaa.", "bbb.", ...]', '["aaa."]')
 
-    for ith_retry in range(5):
+    for ith_retry in range(10):
         try:
             resp, cost = llm_request(prompt, temperature=0.0, hypo=True, model=llm)
 

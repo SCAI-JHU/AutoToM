@@ -30,6 +30,6 @@ def openrouter_request(prompt, model, seed):
             response = ChatCompletion(**response.json())
             response.choices[0].logprobs.content[0].top_logprobs
             return response
-        except TypeError:
+        except Exception:
             continue
     raise Exception("Failed to get logprobs")
