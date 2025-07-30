@@ -4,6 +4,7 @@ import math
 import string
 import numpy as np
 from utils import *
+from utils_openrouter import openrouter_request
 import openai
 import os
 
@@ -177,27 +178,63 @@ Determine if the following statement is likely: {statement}
 A) Likely.
 B) Unlikely."""
     if "gpt" in model:
+        model = os.getenv("LOGPROBS_MODEL", "gpt-4o")
+        endpoint = os.getenv("LOGPROBS_ENDPOINT", "openai")
+
         global cost_of_estimating_likelihood
         global times_of_estimating
-        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-        response = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": prompt},
-            ],
-            model=model,
-            logprobs=True,
-            top_p=0,
-            top_logprobs=5,
-            temperature=0.0,
-            seed=global_seed,
-            max_tokens=1,
-        )
+
+        if endpoint == "openrouter":
+            response = openrouter_request(prompt, model, global_seed)
+
+        elif endpoint in ("openai", "vllm", "litellm"):
+            if endpoint == "openai":
+                client = OpenAI()
+                completion_func = client.chat.completions.create
+
+            elif endpoint == "vllm":
+                client = OpenAI(api_key="EMPTY", base_url="http://localhost:8000/v1")
+                completion_func = client.chat.completions.create
+
+            elif endpoint == "litellm":
+                import litellm
+                completion_func = litellm.completion
+
+            response = completion_func(
+                messages=[
+                    {"role": "system", "content": prompt},
+                ],
+                model=model,
+                logprobs=True,
+                top_p=0.01,
+                top_logprobs=5,
+                temperature=0.0,
+                seed=global_seed,
+                max_tokens=1,
+                extra_body={
+                    "chat_template_kwargs": {"enable_thinking": False},
+                }
+                if endpoint == "vllm" and model in ("Qwen/Qwen3-8B", "Qwen/Qwen3-32B")
+                else None,
+            )
+        
+        else:
+            raise ValueError(f"Invalid endpoint: {endpoint}")
+
         if model == "gpt-4":
             inp, op = 30 / 1000000, 60 / 1000000
         elif "gpt-4o" in model:
             inp, op = 5 / 1000000, 15 / 1000000
         elif model == "gpt-3.5-turbo":
             inp, op = 0.5 / 1000000, 1.5 / 1000000
+        elif endpoint == "vllm" or model.endswith(":free"):
+            inp, op = 0, 0
+        elif model == "qwen/qwen3-235b-a22b-2507":
+            # https://openrouter.ai/qwen/qwen3-235b-a22b-2507
+            inp, op = 0.12e-6, 0.59e-6
+        elif model == "deepseek/deepseek-chat-v3-0324":
+            # https://openrouter.ai/deepseek/deepseek-chat-v3-0324
+            inp, op = 0.25e-6, 0.85e-6
 
         usage = response.usage
         cost = usage.prompt_tokens * inp + usage.completion_tokens * op
