@@ -16,6 +16,7 @@ import Nested
 import argparse
 import random
 import os
+from pathlib import Path
 
 """
     Creates a ProblemSolver class that will setup and answer the questions in the dataset 
@@ -529,7 +530,7 @@ class ProblemSolver:
                     "Previous Belief", True, False, ["NONE"], np.ones(1) * 0.1
                 )
 
-            output_folder = "../results/node_results"
+            output_folder = f"{os.getenv('RESULTS_DIR', '../results')}/node_results"
             file_path = f"{output_folder}/automated_{self.episode_name}_back{int(self.back_inference)}_reduce{int(self.reduce_hypotheses)}.csv"
 
             assigned_models[start_timestep] = proposed_model
@@ -858,6 +859,8 @@ def main(args):
     Returns:
         Prints the number of questions correct and the correctness of each question
     """
+    # print(os.getenv('RESULTS_DIR', '../results'))
+    # raise
     # Set random seeds for reproducibility
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -908,7 +911,9 @@ def main(args):
     costs = []
     apis = []
     for i, d in enumerate(data):
-        if i < args.start_num:
+        results_dir = os.getenv('RESULTS_DIR', '../results')
+        datum_result_path = Path(f"{results_dir}/metrics/automated_MMToM-QA_{i}_back1_reduce1_seed{args.seed}_metrics.json")
+        if datum_result_path.exists() or i == 120:
             continue
         print(f"Question {i}")
         states, actions, video_id = None, None, None

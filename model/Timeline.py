@@ -317,7 +317,7 @@ class TimeLine:
         return dicts, no_actions
 
     def save_timeline_table(self, dicts):
-        output_folder = "../results/middle"
+        output_folder = f"{os.getenv('RESULTS_DIR', '../results')}/middle"
         output_file = f"{output_folder}/{self.model_name}_{self.episode_name}.csv"
 
         os.makedirs(output_folder, exist_ok=True)
@@ -329,12 +329,12 @@ class TimeLine:
 
 
 def load_timeline_table(model_name, episode_name, reuse=False):
-    file_name = f"../results/middle/{model_name}_{episode_name}.csv"
+    file_name = f"{os.getenv('RESULTS_DIR', '../results')}/middle/{model_name}_{episode_name}.csv"
 
     if not os.path.isfile(file_name):
         if reuse is True:
             file_name = get_filename_with_episode_name(
-                episode_name=episode_name, base_path="../results/middle/"
+                episode_name=episode_name, base_path=f"{os.getenv('RESULTS_DIR', '../results')}/middle/"
             )
             if file_name is None:
                 return None

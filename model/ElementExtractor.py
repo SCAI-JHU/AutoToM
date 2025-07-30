@@ -1086,7 +1086,7 @@ def get_variables_with_time(
 
 
 def save_time_variables(dicts, model_name, episode_name):
-    output_folder = "../results/var"
+    output_folder = f"{os.getenv('RESULTS_DIR', '../results')}/var"
     output_file = f"{output_folder}/{model_name}_{episode_name}.csv"
 
     os.makedirs(output_folder, exist_ok=True)
@@ -1099,7 +1099,7 @@ def save_time_variables(dicts, model_name, episode_name):
 
 
 def save_reconstructed_story(vis, model_name, episode_name, first_agent_name):
-    output_folder = "../results/nested"
+    output_folder = f"{os.getenv('RESULTS_DIR', '../results')}/nested"
     output_file = f"{output_folder}/{model_name}_{episode_name}_{first_agent_name}_reconstructed_story.csv"
 
     os.makedirs(output_folder, exist_ok=True)
@@ -1113,7 +1113,7 @@ def save_reconstructed_story(vis, model_name, episode_name, first_agent_name):
 
 
 def save_belief_probs(probs, model_name, episode_name):
-    output_folder = "../results/probs"
+    output_folder = f"{os.getenv('RESULTS_DIR', '../results')}/probs"
     output_file = f"{output_folder}/{model_name}_{episode_name}.csv"
 
     os.makedirs(output_folder, exist_ok=True)
@@ -1127,7 +1127,7 @@ def save_belief_probs(probs, model_name, episode_name):
 
 def save_metrics(metrics, model_name, episode_name, back_inference, reduce_hypos, seed=None):
 
-    output_folder = "../results/metrics"
+    output_folder = f"{os.getenv('RESULTS_DIR', '../results')}/metrics"
     if seed is not None:
         base_file_name = f"{model_name}_{episode_name}_back{int(back_inference)}_reduce{int(reduce_hypos)}_seed{seed}_metrics.json"
     else:
@@ -1156,7 +1156,7 @@ def save_node_results(
     back_inference,
     red_obs_hypo,
 ):
-    output_folder = "../results/node_results"
+    output_folder = f"{os.getenv('RESULTS_DIR', '../results')}/node_results"
     output_file = f"{output_folder}/{model_name}_{episode_name}_back{int(back_inference)}_reduce{int(red_obs_hypo)}.csv"
 
     os.makedirs(output_folder, exist_ok=True)
@@ -1172,7 +1172,7 @@ def save_node_results(
 
 
 def save_intermediate_probs(individual_likelihoods, model_name, episode_name):
-    output_folder = "../results/intermediate_probs"
+    output_folder = f"{os.getenv('RESULTS_DIR', '../results')}/intermediate_probs"
     output_file = f"{output_folder}/{model_name}_{episode_name}.csv"
     os.makedirs(output_folder, exist_ok=True)
     print(individual_likelihoods)
@@ -1192,7 +1192,7 @@ def save_intermediate_probs(individual_likelihoods, model_name, episode_name):
 
 
 def save_ipomdp_intermediate_story(story, question, choice, model_name, episode_name):
-    output_folder = "../results/nested"
+    output_folder = f"{os.getenv('RESULTS_DIR', '../results')}/nested"
     output_file = (
         f"{output_folder}/{model_name}_{episode_name}_story_question_choices.csv"
     )
@@ -1207,7 +1207,7 @@ def save_ipomdp_intermediate_story(story, question, choice, model_name, episode_
 
 
 def load_estimation_dict(dataset_name, seed):
-    file_name = f"../results/estimation_dicts/{dataset_name}_seed{seed}.json"
+    file_name = f"{os.getenv('RESULTS_DIR', '../results')}/estimation_dicts/{dataset_name}_seed{seed}.json"
     if not os.path.isfile(file_name):
         return {}
     with open(file_name, mode="r") as file:
@@ -1216,27 +1216,27 @@ def load_estimation_dict(dataset_name, seed):
 
 
 def save_estimation_dict(dataset_name, dict, seed):
-    folder = "../results/estimation_dicts/"
+    folder = f"{os.getenv('RESULTS_DIR', '../results')}/estimation_dicts/"
     os.makedirs(folder, exist_ok=True)
-    file_name = f"../results/estimation_dicts/{dataset_name}_seed{seed}.json"
+    file_name = f"{os.getenv('RESULTS_DIR', '../results')}/estimation_dicts/{dataset_name}_seed{seed}.json"
     with open(file_name, mode="w") as file:
         json.dump(dict, file, indent=2)
 
 
 def save_parsed_result(info, model_name, episode_name):
-    os.makedirs("../results/parsed_result", exist_ok=True)
-    file_name = f"../results/parsed_result/{model_name}_{episode_name}.json"
+    os.makedirs(f"{os.getenv('RESULTS_DIR', '../results')}/parsed_result", exist_ok=True)
+    file_name = f"{os.getenv('RESULTS_DIR', '../results')}/parsed_result/{model_name}_{episode_name}.json"
     with open(file_name, mode="w") as file:
         json.dump(info, file, indent=2)
 
 
 def load_parsed_result(model_name, episode_name, reuse=False):
-    file_name = f"../results/parsed_result/{model_name}_{episode_name}.json"
+    file_name = f"{os.getenv('RESULTS_DIR', '../results')}/parsed_result/{model_name}_{episode_name}.json"
     if not os.path.isfile(file_name):
         if reuse is True:
             file_name = get_filename_with_episode_name(
                 episode_name=episode_name,
-                base_path="../results/parsed_result/",
+                base_path=f"{os.getenv('RESULTS_DIR', '../results')}/parsed_result/",
                 suffix="json",
             )
             if file_name is None:
@@ -1250,11 +1250,11 @@ def load_parsed_result(model_name, episode_name, reuse=False):
 
 
 def load_time_variables(model_name, episode_name, reuse=False):
-    file_name = f"../results/var/{model_name}_{episode_name}.csv"
+    file_name = f"{os.getenv('RESULTS_DIR', '../results')}/var/{model_name}_{episode_name}.csv"
     if not os.path.isfile(file_name):
         if reuse is True:
             file_name = get_filename_with_episode_name(
-                episode_name=episode_name, base_path="../results/var/"
+                episode_name=episode_name, base_path=f"{os.getenv('RESULTS_DIR', '../results')}/var/"
             )
             if file_name is None:
                 return None
@@ -1272,7 +1272,7 @@ def load_time_variables(model_name, episode_name, reuse=False):
 
 
 def load_node_results(episode_name, back_inference, red_obs_hypo):
-    output_folder = "../results/node_results"
+    output_folder = f"{os.getenv('RESULTS_DIR', '../results')}/node_results"
     file_name = f"{output_folder}/{episode_name}_back{int(back_inference)}_reduce{int(red_obs_hypo)}.csv"
 
     if not os.path.isfile(file_name):
@@ -1344,7 +1344,7 @@ def update_state(old_state, change, llm, verbose, dataset_name):
 
 
 def load_hypos(episode_name):
-    file_name = f"../results/hypos/{episode_name}.json"
+    file_name = f"{os.getenv('RESULTS_DIR', '../results')}/hypos/{episode_name}.json"
     if not os.path.isfile(file_name):
         return None
     with open(file_name, mode="r") as file:
@@ -1353,7 +1353,7 @@ def load_hypos(episode_name):
 
 
 def save_hypos(hypos, model_name, episode_name):
-    output_folder = "../results/hypos"
+    output_folder = f"{os.getenv('RESULTS_DIR', '../results')}/hypos"
     output_file = f"{output_folder}/{model_name}_{episode_name}.csv"
 
     os.makedirs(output_folder, exist_ok=True)

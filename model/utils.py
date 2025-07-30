@@ -1309,7 +1309,7 @@ def get_model_name(model):
         model_name += var[0].lower()
     return model_name
 
-def get_filename_with_episode_name(episode_name, base_path="../results/middle", suffix="csv"):
+def get_filename_with_episode_name(episode_name, base_path=f"{os.getenv('RESULTS_DIR', '../results')}/middle", suffix="csv"):
 
     pattern = os.path.join(base_path, f"*_{episode_name}.{suffix}")
     
