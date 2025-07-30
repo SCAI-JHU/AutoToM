@@ -1,0 +1,12 @@
+# * dirty
+.vscode/settings.json
+benchmark_prompts_from_mungyao/
+llm-test.ipynb
+
+# * common
+.env
+*.zip
+cache/
+results*/
+lmbase*/
+__pycache__/

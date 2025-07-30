@@ -1,0 +1,29 @@
+{
+  "configurations": [
+    {
+      "name": "MMToM-QA",
+      "type": "debugpy",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "${workspaceFolder}/model",
+      "envFile": "${workspaceFolder}/.env",
+      "program": "ProbSolver.py",
+      "args": [
+        "--dataset_name=MMToM-QA",
+        "--seed=0",
+        "--automated",
+      ]
+    },
+    {
+      "name": "MMToM-QA-LLM-Base",
+      "type": "debugpy",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "${workspaceFolder}/model",
+      "envFile": "${workspaceFolder}/.env",
+      "program": "llm_baseline_eval.py",
+    },
+  ]
+}
