@@ -913,7 +913,16 @@ def main(args):
     for i, d in enumerate(data):
         results_dir = os.getenv('RESULTS_DIR', '../results')
         datum_result_path = Path(f"{results_dir}/metrics/automated_MMToM-QA_{i}_back1_reduce1_seed{args.seed}_metrics.json")
-        if datum_result_path.exists() or i == 120:
+        
+        model_slug = os.getenv("BACKEND_MODEL", "gpt-4o")
+        skip_ids = {
+            "qwen/qwen3-235b-a22b-2507": [],
+            "deepseek/deepseek-chat-v3-0324": [120, 270, 289, 293, 309, 348, 415, 469, 485, 559, 578],
+            "google/gemini-2.5-flash": [94, 468],
+            "gpt-4o": [348],
+        }
+
+        if datum_result_path.exists() or i in skip_ids[model_slug]:
             continue
         print(f"Question {i}")
         states, actions, video_id = None, None, None
