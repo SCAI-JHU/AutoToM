@@ -922,7 +922,9 @@ def main(args):
             "gpt-4o": [348],
         }
 
-        if datum_result_path.exists() or i in skip_ids[model_slug]:
+        if datum_result_path.exists():
+            continue
+        if model_slug in skip_ids and i in skip_ids[model_slug]:
             continue
         print(f"Question {i}")
         states, actions, video_id = None, None, None

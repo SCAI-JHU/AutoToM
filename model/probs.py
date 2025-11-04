@@ -226,6 +226,8 @@ B) Unlikely."""
             inp, op = 30 / 1000000, 60 / 1000000
         elif "gpt-4o" in model:
             inp, op = 5 / 1000000, 15 / 1000000
+        elif "gpt-4o-mini" in model:
+            inp, op = 0.15 / 1000000, 0.6 / 1000000
         elif model == "gpt-3.5-turbo":
             inp, op = 0.5 / 1000000, 1.5 / 1000000
         elif endpoint == "vllm" or model.endswith(":free"):
