@@ -1,4 +1,5 @@
-
+import os
+import json
 def clear_current_nodes(self, start_timestep):
 
     self.intermediate_node_results = [
@@ -55,3 +56,22 @@ def translate_and_add_node_results(self, i, all_node_results):
 
         if node_dict not in self.intermediate_node_results:
             self.intermediate_node_results.append(node_dict)
+
+def get_NLD(variables):
+    res = ""
+    for k, v in variables.items():
+        # print(v)
+        res += v.name + ":" + f"{v.possible_values if len(v.possible_values) != 1 else v.possible_values[0]}" + '\n'
+    return res
+
+def save_NLD_descriptions(self, i, all_NLDs):
+    variables = all_NLDs["variables"]
+    del all_NLDs["variables"]
+    top_k = sorted(all_NLDs.items(), key=lambda x: x[1], reverse=True)[:1]
+    self.NLD_descriptions[i] = (top_k, get_NLD(variables))
+
+    folder = "../results/NLD_descriptions/"
+    os.makedirs(folder, exist_ok=True)
+    file_name = f"../results/NLD_descriptions/{self.model_name}_{self.episode_name}.json"
+    with open(file_name, mode="w") as file:
+        json.dump(self.NLD_descriptions, file, indent=2)

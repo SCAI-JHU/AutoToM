@@ -14,6 +14,7 @@ import TimestepInference
 import ProblemParser
 import Nested
 import argparse
+import random
 
 """
     Creates a ProblemSolver class that will setup and answer the questions in the dataset 
@@ -67,6 +68,11 @@ class ProblemSolver:
         nested_timeline_before=None,
         nested_time_variables_before=None,
         init_belief=False,
+        use_all_timesteps=False,
+        predefined_belief_hypotheses=None,
+        rational_agent_statement=False,
+        seed=42,
+        approximate=False
     ):
         self.world_rules = (
             ""  # we do not use this value and keep it constant for all datasets
@@ -98,11 +104,14 @@ class ProblemSolver:
         self.prev_hyp = prev_hyp
         self.estimation_dictionary = {}
         self.translate_id_recorder = {}
+        self.NLD_descriptions = {}
         self.start_time = time.time()
         self.middle_result_time = self.start_time
         self.no_model_adjustment = no_model_adjustment
-
+        self.use_all_timesteps = use_all_timesteps
+        self.predefined_belief_hypotheses = predefined_belief_hypotheses
         self.recursion_depth = recursion_depth
+        self.seed = seed
 
         self.nested_timeline_before = nested_timeline_before
         self.nested_time_variables_before = nested_time_variables_before
@@ -134,20 +143,24 @@ class ProblemSolver:
             "Observation",
         ]  # all possbile variables for extraction
         self.init_belief = init_belief
-
+        self.rational_agent_statement = rational_agent_statement
+        self.approximate = approximate
         # import tracker and helper functions
         self.clear_current_nodes = NodeResultTracker.clear_current_nodes
         self.translate_and_add_node_results = (
             NodeResultTracker.translate_and_add_node_results
         )
+        self.save_NLD_descriptions = NodeResultTracker.save_NLD_descriptions
         self.infer_last_timestamp = TimestepInference.infer_last_timestamp
         self.infer_belief_at_timestamp = TimestepInference.infer_belief_at_timestamp
+        self.infer_goal_at_timestamp = TimestepInference.infer_goal_at_timestamp
         self.load_parsed_result_into_self = ProblemParser.load_parsed_result_into_self
         self.parse_story_and_question = ProblemParser.parse_story_and_question
         self.contains_utterance = utils.contains_utterance
         self.check_nested = utils.check_nested
         self.get_nested_states = Nested.get_nested_states
         self.save_nested_results = Nested.save_nested_results
+
 
     def information_extraction(self):
         """
@@ -196,7 +209,7 @@ class ProblemSolver:
 
                 if self.model_name == "automated":
                     variable_values_with_time = load_timeline_table(
-                        self.model_name, self.episode_name, reuse=False
+                        self.model_name, self.episode_name, reuse=True
                     )
 
                     if variable_values_with_time is None:
@@ -327,7 +340,7 @@ class ProblemSolver:
                     self.model_name, f"{self.episode_name}_gt"
                 )
                 if ground_truth_time_variables == None:
-                    print(ground_truth_variable_values_with_time)
+                    # print(ground_truth_variable_values_with_time)
                     ground_truth_time_variables = get_variables_with_time(
                         ground_truth_variable_values_with_time,
                         variable_types,
@@ -476,6 +489,7 @@ class ProblemSolver:
         no_observation_hypothesis,
         variable_values_with_time,
         all_probs,
+        action_likelihood_goal
     ):
 
         preproposed_ob_hypos = []
@@ -510,9 +524,10 @@ class ProblemSolver:
                     time_variables[start_timestep - 1][belief_name]
                 )
                 previous_belief.name = "Previous Belief"
+                previous_belief.prior_probs = np.array([0.1 for x in previous_belief.possible_values])
             else:
                 previous_belief = Variable(
-                    "Previous Belief", True, False, ["NONE"], np.ones(1)
+                    "Previous Belief", True, False, ["NONE"], np.ones(1) * 0.1
                 )
 
             output_folder = "../results/node_results"
@@ -563,6 +578,9 @@ class ProblemSolver:
                     saved_model_variables,
                     self.no_model_adjustment,
                     self,
+                    action_likelihood_goal,
+                    self.use_all_timesteps,
+                    self.approximate
                 )
             )
             if terminate:
@@ -623,8 +641,21 @@ class ProblemSolver:
         previous_belief = Variable("Previous Belief", True, False, ["None"], np.ones(1))
         all_probs = []
 
-        self.estimation_dictionary = load_estimation_dict(self.dataset_name)
+        self.estimation_dictionary = load_estimation_dict(self.dataset_name, self.seed)
         results = None
+        action_likelihood_goal = {}
+
+        all_actions = []
+        action_name = f"{self.inf_agent_name}'s Action"
+        for i in range(all_timesteps):
+            if action_name in time_variables[i]:
+                val = time_variables[i][action_name].possible_values[0]
+                if '.' not in val:
+                    all_actions.append(val + '.')
+                else:
+                    all_actions.append(val)
+
+        print('Extracted actions:', all_actions)
 
         if self.model_name == "automated":
             return self.solve_with_automated_model(
@@ -633,27 +664,18 @@ class ProblemSolver:
                 no_observation_hypothesis,
                 variable_values_with_time,
                 all_probs,
+                action_likelihood_goal,
             )
 
         else:
-            # AutoToM w/ given specified model input
-            for start_timestep in range(all_timesteps - 1, -1, -1):
+            if not args.back_inference:
+                start_timestep = 0
                 print(f"Starting from timestep {start_timestep}")
 
                 belief_name = f"{self.inf_agent_name}'s Belief"
-
-                # If we have actual hypotheses for previous belief, include them in the model, but with no prior
-                if (
-                    start_timestep > 0
-                    and belief_name in time_variables[start_timestep - 1]
-                ):
-                    previous_belief = deepcopy(
-                        time_variables[start_timestep - 1][belief_name]
-                    )
-                else:
-                    previous_belief = Variable(
-                        "Previous Belief", True, False, ["NONE"], np.ones(1)
-                    )
+                previous_belief = Variable(
+                    "Previous Belief", True, False, ["NONE"], np.ones(1) * 0.1
+                )
 
                 for i in range(start_timestep, all_timesteps):
                     if self.verbose:
@@ -676,34 +698,35 @@ class ProblemSolver:
                                 variable_values_with_time=variable_values_with_time,
                                 all_probs=all_probs,
                                 all_prob_estimations=self.estimation_dictionary,
+                                action_likelihood_goal=action_likelihood_goal,
+                                previous_actions=" ".join(all_actions[:i][-2:]),
+                                approximate=self.approximate
                             )
                         )
-
-                        # determine if we can stop inference
                         results = list(results)
-                        terminate = False
-
-                        utility_terminate_threshold = -0.673
-                        utility = -entropy(results)
-                        if len(results) == 2:
-                            if utility > utility_terminate_threshold:
-                                terminate = True
-                        else:
-                            if (
-                                self.answerfunc == argmax
-                                and utility > utility_terminate_threshold
-                            ):
-                                terminate = True
-                            elif self.answerfunc == argmin and min(results) < 0.2:
-                                terminate = True
-
-                        if terminate is True:
-                            save_belief_probs(
-                                all_probs, self.model_name, self.episode_name
-                            )
-                            return results, {}
+                        save_belief_probs(
+                            all_probs, self.model_name, self.episode_name
+                        )
+                        return results, {}
 
                     else:
+                        if self.inf_var_name == "Goal":
+                            action_likelihood_goal[i], self.estimation_dictionary, all_probs = (
+                                self.infer_goal_at_timestamp(
+                                    self,
+                                    time_variables=time_variables,
+                                    i=i,
+                                    previous_belief=previous_belief,
+                                    belief_name=belief_name,
+                                    variable_values_with_time=variable_values_with_time,
+                                    all_probs=all_probs,
+                                    no_observation_hypothesis=no_observation_hypothesis,
+                                    all_prob_estimations=self.estimation_dictionary,
+                                    goal_name=f"{self.inf_agent_name}'s Goal",
+                                    previous_actions=" ".join(all_actions[:i][-2:]),
+                                    approximate=self.approximate
+                                )
+                            )
                         previous_belief, self.estimation_dictionary, all_probs = (
                             self.infer_belief_at_timestamp(
                                 self,
@@ -715,8 +738,117 @@ class ProblemSolver:
                                 all_probs=all_probs,
                                 no_observation_hypothesis=no_observation_hypothesis,
                                 all_prob_estimations=self.estimation_dictionary,
+                                previous_actions=" ".join(all_actions[:i][-2:]),
+                                approximate=self.approximate
                             )
                         )
+            else:
+                # AutoToM w/ given specified model input
+                for start_timestep in range(all_timesteps - 1, -1, -1):
+                    print(f"Starting from timestep {start_timestep}")
+
+                    belief_name = f"{self.inf_agent_name}'s Belief"
+
+                    # If we have actual hypotheses for previous belief, include them in the model, but with no prior
+                    if (
+                        start_timestep > 0
+                        and belief_name in time_variables[start_timestep - 1]
+                    ):
+                        previous_belief = deepcopy(
+                            time_variables[start_timestep - 1][belief_name]
+                        )
+                        previous_belief.name = "Previous Belief"
+                        previous_belief.prior_probs = np.array([0.1 for x in previous_belief.possible_values])
+                    else:
+                        previous_belief = Variable(
+                            "Previous Belief", True, False, ["NONE"], np.ones(1)
+                        )
+
+                    for i in range(start_timestep, all_timesteps):
+                        if self.verbose:
+                            print(f"------------- time stamp {i} -------------")
+                        time_variables[i]["Previous Belief"] = previous_belief
+                        variables = time_variables[i]
+                        now_variables = []
+                        inf_name = f"{self.inf_agent_name}'s {self.inf_var_name}"
+
+                        if i == all_timesteps - 1:
+                            results, self.estimation_dictionary, all_probs = (
+                                self.infer_last_timestamp(
+                                    self,
+                                    time_variables=time_variables,
+                                    i=i,
+                                    inf_name=inf_name,
+                                    inf_var_name=self.inf_var_name,
+                                    now_variables=now_variables,
+                                    no_observation_hypothesis=no_observation_hypothesis,
+                                    variable_values_with_time=variable_values_with_time,
+                                    all_probs=all_probs,
+                                    all_prob_estimations=self.estimation_dictionary,
+                                    action_likelihood_goal=action_likelihood_goal,
+                                    previous_actions=" ".join(all_actions[:i][-2:]),
+                                    approximate=self.approximate
+                                )
+                            )
+
+                            # determine if we can stop inference
+                            results = list(results)
+                            terminate = False
+
+                            utility_terminate_threshold = -0.673
+                            utility = -entropy(results)
+                            if len(results) == 2:
+                                if utility > utility_terminate_threshold:
+                                    terminate = True
+                            else:
+                                if (
+                                    self.answerfunc == argmax
+                                    and utility > utility_terminate_threshold
+                                ):
+                                    terminate = True
+                                elif self.answerfunc == argmin and min(results) < 0.2:
+                                    terminate = True
+
+                            if terminate is True:
+                                save_belief_probs(
+                                    all_probs, self.model_name, self.episode_name
+                                )
+                                return results, {}
+
+                        else:
+                            if self.inf_var_name == "Goal":
+                                action_likelihood_goal[i], self.estimation_dictionary, all_probs = (
+                                    self.infer_goal_at_timestamp(
+                                        self,
+                                        time_variables=time_variables,
+                                        i=i,
+                                        previous_belief=previous_belief,
+                                        belief_name=belief_name,
+                                        variable_values_with_time=variable_values_with_time,
+                                        all_probs=all_probs,
+                                        no_observation_hypothesis=no_observation_hypothesis,
+                                        all_prob_estimations=self.estimation_dictionary,
+                                        goal_name=f"{self.inf_agent_name}'s Goal",
+                                        previous_actions=" ".join(all_actions[:i][-2:]),
+                                        approximate=self.approximate
+                                    )
+                                )
+                            previous_belief, self.estimation_dictionary, all_probs = (
+                                self.infer_belief_at_timestamp(
+                                    self,
+                                    time_variables=time_variables,
+                                    i=i,
+                                    previous_belief=previous_belief,
+                                    belief_name=belief_name,
+                                    variable_values_with_time=variable_values_with_time,
+                                    all_probs=all_probs,
+                                    no_observation_hypothesis=no_observation_hypothesis,
+                                    all_prob_estimations=self.estimation_dictionary,
+                                    previous_actions=" ".join(all_actions[:i][-2:]),
+                                    approximate=self.approximate
+                                )
+                            )
+
 
         return results, {}
 
@@ -734,9 +866,15 @@ def main(args):
     Returns:
         Prints the number of questions correct and the correctness of each question
     """
+    # Set random seeds for reproducibility
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    utils.set_global_seed(args.seed)
+    probs.set_global_seed(args.seed)
+    print(f"Random seed set to: {args.seed}")
+    
     dataset_name = args.dataset_name
     data = load_full_dataset(args.dataset_name)
-
     # data = load_dataset(dataset_name)
     cnt = 0
     correct = []
@@ -773,11 +911,13 @@ def main(args):
     print(f"Back inference is {back_inference}")
     reduce_hypotheses = args.reduce_hypotheses
     print(f"Reduce observation hypotheses is {reduce_hypotheses}")
+    use_all_timesteps = args.use_all_timesteps
+    print(f"Use all timesteps is {use_all_timesteps}")
     costs = []
     apis = []
     for i, d in enumerate(data):
-        if i >= args.max_num:
-            break
+        if i < args.start_num:
+            continue
         print(f"Question {i}")
         states, actions, video_id = None, None, None
         if "MuMa" in dataset_name:
@@ -809,7 +949,7 @@ def main(args):
             model_name=model_name,
             episode_name=f"{dataset_name}_{i}",
             llm=llm,
-            verbose=True,
+            verbose=False,
             dataset_name=dataset_name,
             hypo_method=hypo_method,
             nested=nested,
@@ -822,6 +962,8 @@ def main(args):
             prev_hyp=None,
             no_model_adjustment=no_model_adjustment,
             recursion_depth=order,
+            use_all_timesteps=use_all_timesteps,
+            seed=args.seed
         )
 
         final_probs, model_record = solver.solve()
@@ -839,7 +981,7 @@ def main(args):
             + utils.times_of_proposing_hypotheses
         )
 
-        save_estimation_dict(dataset_name, solver.estimation_dictionary)
+        save_estimation_dict(dataset_name, solver.estimation_dictionary, args.seed)
 
         if final_probs == None:
             print("The assigned model cannot answer the question.")
@@ -881,6 +1023,7 @@ def main(args):
             solver.episode_name,
             solver.back_inference,
             solver.reduce_hypotheses,
+            args.seed,
         )
         costs.append(end_cost)
         apis.append(end_api)
@@ -923,11 +1066,9 @@ if __name__ == "__main__":
             "ToMi-2nd",
             "ToMi-memory",
             "ToMi-reality",
-            "BigToM_fatb",
-            "BigToM_fafb",
+            "BigToM_fatb", "BigToM_fafb",
             "BigToM_fbtb",
-            "BigToM_fbfb",
-            "BigToM_bbfb",
+            "BigToM_fbfb", "BigToM_bbfb",
             "BigToM_bbfb",
             "MuMaToM_social_goal",
             "MuMaToM_belief",
@@ -950,19 +1091,17 @@ if __name__ == "__main__":
         choices=[
             "gpt-4o",
         ],
-        default="gpt-4o",
+        default="gpt-4o"
     )
     parser.add_argument("--automated", action="store_true", help="Run automated model.")
     parser.add_argument(
-        "--back_inference",
-        type=bool,
-        default=True,
-        help="Flag for running AutoToM with backwards inference.",
+        "--no_back_inference",
+        action='store_true',
+        default=False,
+        help="Enable running AutoToM with backwards inference.",
     )
     parser.add_argument(
-        "--reduce_hypotheses",
-        type=bool,
-        default=True,
+        "--no_hypothesis_reduction", action='store_true', default=False, 
         help="Flag for running AutoToM with reduced hypotheses.",
     )
     parser.add_argument(
@@ -971,7 +1110,9 @@ if __name__ == "__main__":
         help="Flag for verbose.",
     )
     parser.add_argument(
-        "--no_model_adjustment", action="store_true", help="Ablation studies"
+        "--no_model_adjustment",
+        action="store_true",
+        help="Ablation studies"
     )
     parser.add_argument("--K", type=int, default=1)
     parser.add_argument("--max_num", type=int, default=3)
@@ -979,18 +1120,26 @@ if __name__ == "__main__":
         "--assigned_model",
         type=str,
         default='["State", "Observation", "Belief", "Action", "Goal"]',
-        help="When automated is false, you can assign a manually defined model here.",
+        help="When automated is false, you can assign a manually defined model here."
     )
     parser.add_argument(
-        "--nested",
-        default=None,
-        help="If None, the model will figure out the order itself.",
+        "--use_all_timesteps",
+        action="store_true",
+        help="Used to run experiments where all timesteps in the story are considered."
     )
+    parser.add_argument(
+        "--start_num",
+        default=0,
+        type=int
+    )
+    parser.add_argument("--nested", default=None, help="If None, the model will figure out the order itself.")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
     args = parser.parse_args()
     args.assigned_model = eval(args.assigned_model)
+    args.back_inference = not args.no_back_inference
+    args.reduce_hypotheses = not args.no_hypothesis_reduction
     print(args)
     main(args)
-
     # example of command line run with AutoToM, back inference, reduced hypotheses:
     # python ProbSolver.py --automated --dataset_name "MMToM-QA"
 

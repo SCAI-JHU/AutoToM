@@ -1,7 +1,4 @@
 Choose the variable that best summarizes the information of differences that the choices contain.
-1. Goal: Usually, goal refers to a person's goals or intentions regarding a particular event. However, if it only describes an action of what an agent will do without what they want then this is an Action and not Goal. Helping others to achieve their goals also counts as a person's goal. 
-2. Action: Actions are defined as events that will or can change the world state or the state of an object, e.g. if character's action will not change the state of the main object in the story then it does not count as an action. Actions that the agent will do is considered an action and not a goal. 
-3. Belief: Usually, belief is one's understanding of the state of the world or the state of others, this can result from the final observation that character has or what the final thing character knows. An subjective attitude towards things does not count as belief. An Action or utterance does not count as belief.
 
 Only output the variable.
 Variables include: [Variables]

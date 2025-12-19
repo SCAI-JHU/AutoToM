@@ -29,6 +29,26 @@ AutoToM is an automated agent modeling method for scalable, robust, and interpre
     
     - On Windows: `set OPENAI_API_KEY='your-api-key'`
 
+## Experiment 1: Evaluation on ToM Benchmarks
+
+*To run AutoToM on MMToM-QA, with the default settings of reduced hypotheses and backwards inference*: 
+    
+    cd model
+    python ProbSolver.py --automated --dataset_name "MMToM-QA"
+
+## Experiment 2: Evaluation on Classic Cognitive Studies
+
+*To evaluate AutoToM on the cognitive experiments (Food truck scenarios (Desire and belief inference) / Online goal inference)*:
+    
+    cd experiment_2
+    cd food_truck_scenarios # or, cd online_goal_inference
+    python eval_AutoToM.py
+
+The final results will be printed at the end of the evaluation.
+
+The analysis code is in `analysis.ipynb` under the folder corresponding to each task.
+
+
 ## Testing AutoToM with customized questions
 
 Please check out ``playground.ipynb``. Simply replace the story and choices with your customized input to see how *AutoToM* discover Bayesian models and conduct inverse planning!

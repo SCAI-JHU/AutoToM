@@ -217,8 +217,8 @@ def hypothesis_generation(
         resp_list[j] = resp
     # print(resp_list)
     # print(res)
-    if verbose:
-        enh_print(f"Hypotheses proposed for {element_name}\n{resp_list}")
+    # print(prompt)
+    enh_print(f"Hypotheses proposed for {element_name}\n{resp_list}")
     return resp_list
 
 
@@ -356,6 +356,19 @@ def verify_variable(infer_variable, sentence):
     resp, cost = llm_request(prompt, temperature=0.0, model="gpt-4o")
     return resp
 
+def verify_hypo(gt_hypo, gen_hypo):
+    with open(
+        f"prompts/prompts_gpt-4o/verify_hypo.txt", "r", encoding="utf-8"
+    ) as prompt_file:
+        prompt_template = prompt_file.read().strip()
+    prompt = prompt_template.replace("[Sentence1]", f"{gt_hypo}")
+    prompt = prompt.replace("[Sentence2]", f"{gen_hypo}")
+    resp, cost = llm_request(prompt, temperature=0.0, model="gpt-4o")
+    # enh_print(prompt + resp)
+    if "A" in resp[:3]:
+        return gt_hypo
+    else:
+        return gt_hypo + ' ' + gen_hypo
 
 def get_inf_var(question, choices, model, llm, dataset_name):
     if "belief_of_goal" in dataset_name:
@@ -465,9 +478,10 @@ def mmtom_get_variables(
     elif "doesn't think" in question:
         known_Belief = question.split("If ")[1].split(",")[0] + "."
 
-    preproposed_ob_hypos = []
     val_with_time = []
     for i in range(len(actions)):
+        if inf_agent_name not in actions[i]:
+            actions[i] = f"{inf_agent_name} {actions[i]}."
         vals = {
             f"{inf_agent_name}'s Action": actions[i],
             "State": states[i],
@@ -477,6 +491,7 @@ def mmtom_get_variables(
             "All Actions": [actions[i]],
         }
         val_with_time.append(vals)
+
     for i, vals in enumerate(val_with_time):
         var_dict = {}
         for var_type in variable_types:
@@ -507,33 +522,41 @@ def mmtom_get_variables(
                 continue
 
             if vals[var_name] != "NONE":
-                var_dict[var_name] = Variable(
-                    name=var_name,
-                    in_model=True,
-                    is_observed=True,
-                    possible_values=[vals[var_name]],
-                )
+                if "Belief" not in var_name:
+                    hypos = [vals[var_name]]
+                    var_dict[var_name] = Variable(
+                        name=var_name,
+                        in_model=True,
+                        is_observed=True,
+                        possible_values=hypos,
+                    )
+                else:
+                    # Because a given belief hypotheses is definitely not covering the whole belief set of the agent
+                    hypos = []
+                    for c in choices:
+                        gen_hypo = hypothesis_generation(
+                            [], c + '; ' + vals[f"{inf_agent_name}'s Action"], now_story, character, var_type[1], K, hypo_llm
+                        )[0]
+                        hypos.append(verify_hypo(vals[var_name], gen_hypo))
+                            
+                    var_dict[var_name] = Variable(
+                        name=var_name,
+                        in_model=True,
+                        is_observed=False,
+                        possible_values=hypos,
+                    )
             else:
 
-                if (
-                    var_type[1] == "Observation"
-                ):  # also change the way we propose hyp for belief
-
-                    if len(preproposed_ob_hypos) == 0:
-                        for c in choices:
-                            preproposed_ob_hypos += hypothesis_generation(
-                                [],
-                                c,
-                                now_story,
-                                character,
-                                var_type[1],
-                                1,
-                                hypo_llm,
-                            )
-                        preproposed_ob_hypos += hypothesis_generation_no_observation(
-                            choices, character, hypo_llm, True
+                if var_type[1] == "Observation":
+                    hypos = []
+                    # Propose quality hypotheses for observation and belief, conditioned on observable variables
+                    for c in choices:
+                        hypos += hypothesis_generation([], c + '; ' + vals[f"{inf_agent_name}'s Action"], 
+                            now_story, inf_agent_name,"Observation",1,hypo_llm,
                         )
-                    hypos = preproposed_ob_hypos
+                    hypos += hypothesis_generation_no_observation(
+                        choices, inf_agent_name, hypo_llm, True
+                    )
 
                 elif var_type[1] == "Goal" and known_Goal != "NONE":
                     var_dict[var_name] = Variable(
@@ -544,13 +567,12 @@ def mmtom_get_variables(
                     )
                     continue
                 else:
-                    hypo_c = []
+                    hypos = []
                     for c in choices:
-                        hypo_c += hypothesis_generation(
-                            [], c, now_story, character, var_type[1], K, hypo_llm
+                        hypos += hypothesis_generation(
+                            [], c + '; ' + vals[f"{inf_agent_name}'s Action"], now_story, character, var_type[1], K, hypo_llm
                         )
 
-                    hypos = hypo_c
                 var_dict[var_name] = Variable(
                     name=var_name,
                     in_model=True,
@@ -629,12 +651,29 @@ def mmtom_get_variables_at_time(
             continue
 
         if vals[var_name] != "NONE":
-            var_dict[var_name] = Variable(
-                name=var_name,
-                in_model=True,
-                is_observed=True,
-                possible_values=[vals[var_name]],
-            )
+            if "Belief" not in var_name:
+                hypos = [vals[var_name]]
+                var_dict[var_name] = Variable(
+                    name=var_name,
+                    in_model=True,
+                    is_observed=True,
+                    possible_values=hypos,
+                )
+            else:
+                # Because a given belief hypotheses is definitely not covering the whole belief set of the agent
+                hypos = []
+                for c in choices:
+                    gen_hypo = hypothesis_generation(
+                        [], c + '; ' + vals[f"{inf_agent_name}'s Action"], now_story, character, var_type[1], K, hypo_llm
+                    )[0]
+                    hypos.append(verify_hypo(vals[var_name], gen_hypo))
+                        
+                var_dict[var_name] = Variable(
+                    name=var_name,
+                    in_model=True,
+                    is_observed=False,
+                    possible_values=hypos,
+                )
         else:
             # We don't propose hypotheses for actions
             # We don't propose hypotheses for utterances
@@ -646,25 +685,16 @@ def mmtom_get_variables_at_time(
                     possible_values=["NONE"],
                 )
                 continue
-            if (
-                var_type[1] == "Observation"
-            ):  # also change the way we propose hyp for belief
-
-                if len(preproposed_ob_hypos) == 0:
-                    for c in choices:
-                        preproposed_ob_hypos += hypothesis_generation(
-                            [],
-                            c,
-                            now_story,
-                            character,
-                            var_type[1],
-                            1,
-                            hypo_llm,
-                        )
-                    preproposed_ob_hypos += hypothesis_generation_no_observation(
-                        choices, character, hypo_llm, True
+            if var_type[1] == "Observation":
+                hypos = []
+                # Propose quality hypotheses for observation and belief, conditioned on observable variables
+                for c in choices:
+                    hypos += hypothesis_generation([], c + '; ' + vals[f"{inf_agent_name}'s Action"], 
+                        now_story, inf_agent_name,"Observation",1,hypo_llm,
                     )
-                hypos = preproposed_ob_hypos
+                hypos += hypothesis_generation_no_observation(
+                    choices, inf_agent_name, hypo_llm, True
+                )
 
             elif var_type[1] == "Goal" and known_Goal != "NONE":
                 var_dict[var_name] = Variable(
@@ -675,13 +705,11 @@ def mmtom_get_variables_at_time(
                 )
                 continue
             else:
-                hypo_c = []
+                hypos = []
                 for c in choices:
-                    hypo_c += hypothesis_generation(
-                        [], c, now_story, character, var_type[1], K, hypo_llm
+                    hypos += hypothesis_generation(
+                        [], c + '; ' + vals[f"{inf_agent_name}'s Action"], now_story, character, var_type[1], K, hypo_llm
                     )
-
-                hypos = hypo_c
             var_dict[var_name] = Variable(
                 name=var_name,
                 in_model=True,
@@ -710,6 +738,7 @@ def get_variables_at_time(
     inf_agent_action,
     dataset_name,
     precomputed_states,
+    predefined_bel_hypos,
 ):
     now_story = vals["Chunk"]
     inf_agent_action = inf_agent_action
@@ -790,6 +819,8 @@ def get_variables_at_time(
                             choices, character, hypo_llm, True
                         )
                     hypos = preproposed_ob_hypos
+            elif var_type[1] == "Belief" and predefined_bel_hypos != None:
+                hypos = predefined_bel_hypos
             else:
                 hypo_c = []
                 for c in choices:
@@ -1088,17 +1119,23 @@ def save_belief_probs(probs, model_name, episode_name):
     print(f"Probs results saved to {output_file}")
 
 
-def save_metrics(metrics, model_name, episode_name, back_inference, reduce_hypos):
+def save_metrics(metrics, model_name, episode_name, back_inference, reduce_hypos, seed=None):
 
     output_folder = "../results/metrics"
-    base_file_name = f"{model_name}_{episode_name}_back{int(back_inference)}_reduce{int(reduce_hypos)}_metrics.json"
+    if seed is not None:
+        base_file_name = f"{model_name}_{episode_name}_back{int(back_inference)}_reduce{int(reduce_hypos)}_seed{seed}_metrics.json"
+    else:
+        base_file_name = f"{model_name}_{episode_name}_back{int(back_inference)}_reduce{int(reduce_hypos)}_metrics.json"
     output_file = os.path.join(output_folder, base_file_name)
 
     os.makedirs(output_folder, exist_ok=True)
 
     count = 1
     while os.path.exists(output_file):
-        new_file_name = f"{base_file_name}_{count}.json"
+        if seed is not None:
+            new_file_name = f"{model_name}_{episode_name}_back{int(back_inference)}_reduce{int(reduce_hypos)}_seed{seed}_metrics_{count}.json"
+        else:
+            new_file_name = f"{base_file_name}_{count}.json"
         output_file = os.path.join(output_folder, new_file_name)
         count += 1
 
@@ -1163,8 +1200,8 @@ def save_ipomdp_intermediate_story(story, question, choice, model_name, episode_
         writer.writerow(res_dict)
 
 
-def load_estimation_dict(dataset_name):
-    file_name = f"../results/estimation_dicts/{dataset_name}.json"
+def load_estimation_dict(dataset_name, seed):
+    file_name = f"../results/estimation_dicts/{dataset_name}_seed{seed}.json"
     if not os.path.isfile(file_name):
         return {}
     with open(file_name, mode="r") as file:
@@ -1172,10 +1209,10 @@ def load_estimation_dict(dataset_name):
     return res
 
 
-def save_estimation_dict(dataset_name, dict):
+def save_estimation_dict(dataset_name, dict, seed):
     folder = "../results/estimation_dicts/"
     os.makedirs(folder, exist_ok=True)
-    file_name = f"../results/estimation_dicts/{dataset_name}.json"
+    file_name = f"../results/estimation_dicts/{dataset_name}_seed{seed}.json"
     with open(file_name, mode="w") as file:
         json.dump(dict, file, indent=2)
 

@@ -7,8 +7,17 @@ from utils import *
 import openai
 import os
 
+# Global variables for cost tracking and seed
+global_seed = 42
+
 cost_of_estimating_likelihood = 0.0
 times_of_estimating = 0
+
+
+def set_global_seed(seed):
+    """Set the global seed for all likelihood estimation requests"""
+    global global_seed
+    global_seed = seed
 
 
 def return_letters(n):
@@ -28,6 +37,7 @@ def get_likelihood(
     variable=None,
     inf_agent=None,
     action_exponent=None,
+    rational_agent_statement=False,
 ):
     likelihood = get_likelihood_general(
         info,
@@ -38,6 +48,7 @@ def get_likelihood(
         variable,
         inf_agent,
         action_exponent,
+        rational_agent_statement=rational_agent_statement
     )
     return likelihood
 
@@ -51,6 +62,7 @@ def get_likelihood_general(
     variable=None,
     inf_agent=None,
     action_exponent=None,
+    rational_agent_statement=False
 ):
 
     if "Observation" in variable:
@@ -99,7 +111,7 @@ B) Unlikely."""
                 Determine if the following statement is likely: {action_b} is a better immediate action than {action_a}. 
                 A) Likely.
                 B) Unlikely."""
-        print(prompt)
+        # print(prompt)
 
     elif "Action" in variable:
         if "Belief of Goal" in info:  # P(Action | Goal, Belief, Belief of Goal)
@@ -114,11 +126,23 @@ If {inf_agent}'s goal, {inf_agent}'s belief of goal, and {inf_agent}'s action do
 Determine if {inf_agent}'s action is likely.
 A) Likely.
 B) Unlikely."""
-        else:  # P(Action | Goal, Belief)
+        elif "Social Goal" in info:  # P(Action | Social Goal, Belief) in multi-agent setting
             prompt = f"""Determine if the statement is likely, respond with only either A or B. If it's not certain but it's possible, it's likely.
 {info}
 Here is a statement of {inf_agent}'s action. Think about {inf_agent}'s goal.
 {inf_agent} will perform actions according to {inf_agent}'s belief, and any action that does not align with the belief is very unlikely, except when {inf_agent}'s goal is to hinder or to prevent others, and in this case (goal is hindering others) {inf_agent}'s action is only likely when it's different with {inf_agent}'s belief. If {inf_agent}'s mental states contains conditions like "When giving information" and the action is not giving information, it's unlikely.
+Determine if the following statement is likely: {statement}
+A) Likely.
+B) Unlikely."""
+        else: # P(Action | Goal, Belief)
+            if rational_agent_statement:
+                rational_statement = f" {inf_agent} is very sure of their belief and will not perform unnecessary actions."
+            else:
+                rational_statement = ""
+            prompt = f"""Determine if the statement is likely, respond with only either A or B.
+{info}
+Here is a statement of {inf_agent}'s action. The belief stands for {inf_agent}'s current belief which is true. {inf_agent} is likely to act according to goal and belief concerning certain objects (the wording for objects must be same. You should ignore the correlation of different objects. e.g., plate and apple are two different objects.) Notice that {inf_agent}'s belief does not represent the goal.
+When belief and goal are irrelevant, and action is directly driven by goal, it's likely. When belief and goal are relevant (about exactly the same object) and they contradict (or irrelevant) with action, it's unlikely.{rational_statement}
 Determine if the following statement is likely: {statement}
 A) Likely.
 B) Unlikely."""
@@ -165,7 +189,7 @@ B) Unlikely."""
             top_p=0,
             top_logprobs=5,
             temperature=0.0,
-            seed=0,
+            seed=global_seed,
             max_tokens=1,
         )
         if model == "gpt-4":
@@ -179,7 +203,7 @@ B) Unlikely."""
         cost = usage.prompt_tokens * inp + usage.completion_tokens * op
         cost_of_estimating_likelihood += cost
         times_of_estimating += 1
-        if times_of_estimating % 10 == 0:
+        if times_of_estimating % 100 == 0:
             enh_print(
                 f"Accumulated Cost of Estimating Likelihood: {cost_of_estimating_likelihood} in {times_of_estimating} times",
                 "red",
@@ -206,65 +230,13 @@ B) Unlikely."""
                     f"Encountering None values in prob_a!!\n\n{prompt}\n\n{response_dict}"
                 )
             return 0.1
-        if prob_a < 0.03:
-            prob_a = 0.03
-        if prob_a > 0.97:
-            prob_a = 1.0
+
         # clip the values
         if action_exponent is not None and "Action" in variable:
             return math.pow(prob_a, action_exponent)
-        if verbose:
-            print(prompt, "\n", prob_a)
+        # if verbose:
+        print(prompt, "\n", prob_a)
         return prob_a
-    elif "Llama-3.1-8B" in model:
-        prob_a = llama_likelihood_request(prompt, model, max_tokens=200)
-        return prob_a
-
-
-def llama_likelihood_request(
-    prompt, model_id="meta-llama/Meta-Llama-3.1-8B-Instruct", max_tokens=200
-):
-    API_TOKEN = ""  # Put your API token here
-
-    pipeline = transformers.pipeline(
-        "text-generation",
-        model=model_id,
-        model_kwargs={"torch_dtype": torch.bfloat16},
-        device_map="auto",
-        token=API_TOKEN,
-    )
-
-    model = pipeline.model
-    tokenizer = pipeline.tokenizer
-
-    def compute_prob_of_string(inp, answer_tokens):
-        inputs = tokenizer.encode(inp, add_special_tokens=False)
-        inputs = torch.tensor([inputs], dtype=torch.long).to(model.device)
-        answer_tokens = tokenizer.encode(answer_tokens, add_special_tokens=False)
-        final_prob = 1.0
-        with torch.no_grad():
-            for token in answer_tokens:
-                outputs = model(input_ids=inputs)
-                logits = outputs.logits[0, -1, :]
-                probs = torch.softmax(logits, dim=-1)
-                probs = probs[token].item()
-                final_prob *= probs
-                next_input = torch.tensor([[token]], device=model.device)
-                inputs = torch.cat([inputs, next_input], dim=1)
-        return final_prob
-
-    prob_a_unnormalized = compute_prob_of_string(prompt, "A) Likely.")
-    prob_b_unnormalized = compute_prob_of_string(prompt, "B) Unlikely.")
-    denominator = prob_a_unnormalized + prob_b_unnormalized
-
-    if denominator <= 1e-12:
-        prob_a_normalized = 0.5
-    else:
-        prob_a_normalized = prob_a_unnormalized / denominator
-
-    print("No cost: using GPU with opensource LLM")
-    print(prompt, "\n", prob_a_normalized)
-    return prob_a_normalized
 
 
 def get_likelihood_test(prompt, verbose=True):
@@ -278,7 +250,7 @@ def get_likelihood_test(prompt, verbose=True):
         top_p=0,
         top_logprobs=5,
         temperature=0.0,
-        seed=0,
+        seed=global_seed,
         max_tokens=1,
     )
 

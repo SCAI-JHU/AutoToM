@@ -1,11 +1,12 @@
-Propose [num] hypotheses for the belief of [Character] in the story aligned with the context of: [Context]. Make sure that it is not any of the hypotheses in [Wrong Hypotheses], if it is then propose new hypotheses that are very different. 
-
-It should be related to [Information] and the context described above. 
-
-The hypotheses do not require reasoning or consideration of whether they are likely to occur. The only limitation is that they must be relevant to the information already provided. You cannot return nothing.
-Usually, belief is one's view or perspective on a matter, and it represents an understanding of the state of the world or the state of others. The emotional attitudes toward a specific thing do not count as belief.
+Propose [num] hypotheses for the belief of [Character] in the story.
+Usually, belief is one's view or perspective on a state, and it represents an understanding of the physical state of the world.
 Do not state any reason for the hypotheses. Do not contain any form of explanation in the hypotheses.
-Output a list of hypotheses of length [num] in following form: ["aaa.", "bbb.", ...] 
+Output a list of hypotheses of length [num] in following form: ["aaa.", "bbb.", ...]
 
-[Context]
+Given information: [Information]
+Ensure that the hypotheses align with the given information perfectly. The hypotheses could be like "[Character] believes that A is in B".
+First, list out all entities in the given information. Then, formulate hypotheses using all entities. Make sure the hypotheses starts with [Character].
+Output the hypotheses in the following form: ["aaa."]
+Observation Hypotheses: []
+
 Belief Hypotheses:
