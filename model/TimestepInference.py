@@ -16,7 +16,8 @@ def infer_belief_at_timestamp(
     no_observation_hypothesis,
     all_prob_estimations,
     previous_actions=None,
-    rational_agent_statement=False
+    rational_agent_statement=False,
+    approximate=False
 ):
     # For all time stamps except for the last --> we infer belief with Bayesian Inference
     # print(no_observation_hypothesis)
@@ -55,7 +56,8 @@ def infer_belief_at_timestamp(
         no_observation_hypothesis=no_observation_hypothesis,
         reduce_hypotheses=self.reduce_hypotheses,
         previous_actions=previous_actions,
-        rational_agent_statement=rational_agent_statement
+        rational_agent_statement=rational_agent_statement,
+        approximate=approximate
     )
 
     try:
@@ -102,7 +104,8 @@ def infer_last_timestamp(
     all_prob_estimations,
     action_likelihood_goal,
     previous_actions=None,
-    rational_agent_statement=False
+    rational_agent_statement=False,
+    approximate=False
 ):
     
     # print(previous_actions)
@@ -146,7 +149,8 @@ def infer_last_timestamp(
         no_observation_hypothesis=no_observation_hypothesis,
         reduce_hypotheses=self.reduce_hypotheses,
         previous_actions=previous_actions,
-        rational_agent_statement=rational_agent_statement
+        rational_agent_statement=rational_agent_statement,
+        approximate=approximate
     )
 
     results, all_prob_estimations, all_node_results, all_NLDs = inference_model.infer(inf_var_name, self.model_name, self.episode_name, self.init_belief)
@@ -208,7 +212,8 @@ def infer_goal_at_timestamp(
     no_observation_hypothesis,
     all_prob_estimations,
     previous_actions=None,
-    rational_agent_statement=False
+    rational_agent_statement=False,
+    approximate=False
 ):
     # If we're inferring goal, we need to record P(Action | Goal, ...) at every timestep (we assume the agent has a consistent goal)
     # Same with belief, we infer goal with Bayesian Inference. But notice that the compute (API calls / tokens) will not increase, because the likelihoods needed are already stored in the cache.
@@ -247,7 +252,8 @@ def infer_goal_at_timestamp(
         no_observation_hypothesis=no_observation_hypothesis,
         reduce_hypotheses=self.reduce_hypotheses,
         previous_actions=previous_actions,
-        rational_agent_statement=rational_agent_statement
+        rational_agent_statement=rational_agent_statement,
+        approximate=approximate
     )
 
     try:

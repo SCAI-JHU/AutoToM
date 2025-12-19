@@ -71,7 +71,8 @@ class ProblemSolver:
         use_all_timesteps=False,
         predefined_belief_hypotheses=None,
         rational_agent_statement=False,
-        seed=42
+        seed=42,
+        approximate=False
     ):
         self.world_rules = (
             ""  # we do not use this value and keep it constant for all datasets
@@ -143,6 +144,7 @@ class ProblemSolver:
         ]  # all possbile variables for extraction
         self.init_belief = init_belief
         self.rational_agent_statement = rational_agent_statement
+        self.approximate = approximate
         # import tracker and helper functions
         self.clear_current_nodes = NodeResultTracker.clear_current_nodes
         self.translate_and_add_node_results = (
@@ -577,7 +579,8 @@ class ProblemSolver:
                     self.no_model_adjustment,
                     self,
                     action_likelihood_goal,
-                    self.use_all_timesteps
+                    self.use_all_timesteps,
+                    self.approximate
                 )
             )
             if terminate:
@@ -696,7 +699,8 @@ class ProblemSolver:
                                 all_probs=all_probs,
                                 all_prob_estimations=self.estimation_dictionary,
                                 action_likelihood_goal=action_likelihood_goal,
-                                previous_actions=" ".join(all_actions[:i][-2:])
+                                previous_actions=" ".join(all_actions[:i][-2:]),
+                                approximate=self.approximate
                             )
                         )
                         results = list(results)
@@ -719,7 +723,8 @@ class ProblemSolver:
                                     no_observation_hypothesis=no_observation_hypothesis,
                                     all_prob_estimations=self.estimation_dictionary,
                                     goal_name=f"{self.inf_agent_name}'s Goal",
-                                    previous_actions=" ".join(all_actions[:i][-2:])
+                                    previous_actions=" ".join(all_actions[:i][-2:]),
+                                    approximate=self.approximate
                                 )
                             )
                         previous_belief, self.estimation_dictionary, all_probs = (
@@ -733,7 +738,8 @@ class ProblemSolver:
                                 all_probs=all_probs,
                                 no_observation_hypothesis=no_observation_hypothesis,
                                 all_prob_estimations=self.estimation_dictionary,
-                                previous_actions=" ".join(all_actions[:i][-2:])
+                                previous_actions=" ".join(all_actions[:i][-2:]),
+                                approximate=self.approximate
                             )
                         )
             else:
@@ -780,7 +786,8 @@ class ProblemSolver:
                                     all_probs=all_probs,
                                     all_prob_estimations=self.estimation_dictionary,
                                     action_likelihood_goal=action_likelihood_goal,
-                                    previous_actions=" ".join(all_actions[:i][-2:])
+                                    previous_actions=" ".join(all_actions[:i][-2:]),
+                                    approximate=self.approximate
                                 )
                             )
 
@@ -822,7 +829,8 @@ class ProblemSolver:
                                         no_observation_hypothesis=no_observation_hypothesis,
                                         all_prob_estimations=self.estimation_dictionary,
                                         goal_name=f"{self.inf_agent_name}'s Goal",
-                                        previous_actions=" ".join(all_actions[:i][-2:])
+                                        previous_actions=" ".join(all_actions[:i][-2:]),
+                                        approximate=self.approximate
                                     )
                                 )
                             previous_belief, self.estimation_dictionary, all_probs = (
@@ -836,7 +844,8 @@ class ProblemSolver:
                                     all_probs=all_probs,
                                     no_observation_hypothesis=no_observation_hypothesis,
                                     all_prob_estimations=self.estimation_dictionary,
-                                    previous_actions=" ".join(all_actions[:i][-2:])
+                                    previous_actions=" ".join(all_actions[:i][-2:]),
+                                    approximate=self.approximate
                                 )
                             )
 

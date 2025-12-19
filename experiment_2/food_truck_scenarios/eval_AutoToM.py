@@ -128,7 +128,8 @@ for k, v in data.items():
             recursion_depth=None,
             predefined_belief_hypotheses=belief_choices,
             use_all_timesteps=True,
-            rational_agent_statement=True
+            rational_agent_statement=True,
+            approximate=True
         )
     import TimestepInference
 

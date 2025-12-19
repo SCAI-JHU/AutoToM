@@ -85,7 +85,8 @@ for k, v in data.items():
             no_model_adjustment=False,
             recursion_depth=None,
             use_all_timesteps=True,
-            rational_agent_statement=True
+            rational_agent_statement=True,
+            approximate=True
         )
     import TimestepInference
     

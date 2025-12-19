@@ -25,11 +25,18 @@ from utils import *
         infer: infer the probabilities for the inferring variable 
 """
 
-def capping_value(prob_a):
-    if prob_a < 0.10:
-        prob_a = 0.03
-    if prob_a > 0.97:
-        prob_a = 1.0
+def capping_value(prob_a, approximate=False):
+    if not approximate:
+        # This is for robustness
+        if prob_a < 0.10:
+            prob_a = 0.03
+        if prob_a > 0.97:
+            prob_a = 1.0
+    else:
+        if prob_a < 0.20:
+            prob_a = 0.20
+        if prob_a > 0.80:
+            prob_a = 0.80
     return prob_a
 
 class BayesianInferenceModel:
@@ -50,7 +57,8 @@ class BayesianInferenceModel:
         no_observation_hypothesis="NONE",
         reduce_hypotheses=False,
         previous_actions=None,
-        rational_agent_statement=False
+        rational_agent_statement=False,
+        approximate=False
     ):
         self.model_name = model_name
         self.episode_name = episode_name
@@ -88,6 +96,7 @@ class BayesianInferenceModel:
         self.no_observation_hypothesis = no_observation_hypothesis
         self.reduce_hypotheses = reduce_hypotheses
         self.previous_actions = previous_actions
+        self.approximate = approximate
 
         # Check for "Observation" first; if not found, use "State" as the observation
         observation_var_name = next(
@@ -227,9 +236,9 @@ class BayesianInferenceModel:
                         verbose=self.verbose,
                         variable="Actions",
                         inf_agent=self.inf_agent,
-                    ))
+                    ), approximate=self.approximate)
                 if key in self.recorder:
-                    logits = capping_value(self.recorder[key])
+                    logits = capping_value(self.recorder[key], approximate=self.approximate)
                 else:
                     logits = capping_value(
                             get_likelihood(
@@ -241,7 +250,7 @@ class BayesianInferenceModel:
                             variable=son,
                             inf_agent=self.inf_agent,
                             rational_agent_statement=self.rational_agent_statement
-                        )
+                        ), approximate=self.approximate
                     )
                     # print(logits)
 
@@ -378,7 +387,7 @@ class BayesianInferenceModel:
                         verbose=self.verbose,
                         variable="Initial Belief",
                         inf_agent=self.inf_agent,
-                    ))
+                    ), approximate=self.approximate)
                     probs.append(logits)
                 exps = np.exp(probs)
                 probs = exps / np.sum(exps)
@@ -420,7 +429,7 @@ class BayesianInferenceModel:
                         verbose=self.verbose,
                         variable="Initial Belief",
                         inf_agent=self.inf_agent,
-                    ))
+                    ), approximate=self.approximate)
                     probs.append(logits)
                 exps = np.exp(probs)
                 probs = exps / np.sum(exps)
