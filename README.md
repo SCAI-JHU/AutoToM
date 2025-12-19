@@ -1,6 +1,19 @@
 ## AutoToM: Scaling Model-based Mental Inference via Automated Agent Modeling
+### [Paper](https://arxiv.org/abs/2502.15676) | [Project Page](https://chuanyangjin.com/AutoToM) | [Tweet](https://x.com/chuanyang_jin/status/1894737913499246665)
 
-We propose AutoToM, an automated agent modeling method for scalable, robust, and interpretable mental inference.
+AutoToM is an automated agent modeling method for scalable, robust, and interpretable mental inference. It achieves SOTA on five benchmarks, produces human-like confidence estimates, and supports embodied decision-making. 
+
+![intro](visuals/intro.png)
+
+## Example Usage
+
+*To run AutoToM on MMToM-QA, with the default settings of reduced hypotheses and backwards inference*: 
+
+    python ProbSolver.py --automated --dataset_name "MMToM-QA"
+
+*To run AutoToM on ToMi-1st with a specified model input*: 
+
+    python ProbSolver.py --dataset_name "ToMi-1st" --assigned_model "['State', 'Observation', 'Belief']"
 
 ## Requirements
 
