@@ -207,7 +207,7 @@ class ProblemSolver:
 
                 if self.model_name == "automated":
                     variable_values_with_time = load_timeline_table(
-                        self.model_name, self.episode_name, reuse=False
+                        self.model_name, self.episode_name, reuse=True
                     )
 
                     if variable_values_with_time is None:
