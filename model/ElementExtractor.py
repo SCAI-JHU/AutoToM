@@ -1326,7 +1326,7 @@ def get_variables(story, character, var_name_list, K, inf_var_name, llm, dataset
     return var_list
 
 
-def update_state(old_state, change, llm, verbose, dataset_name):
+def update_state(old_state, change, llm, verbose, dataset_name=None):
     change = change.strip()
     if change == "NONE" or change == "":
         return old_state

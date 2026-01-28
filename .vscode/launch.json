@@ -1,6 +1,40 @@
 {
   "configurations": [
     {
+      "name": "parse-results-1118",
+      "type": "debugpy",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "${workspaceFolder}",
+      "program": "scripts/parse-results-1118.py",
+    },
+    {
+      "name": "ie",
+      "type": "debugpy",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "${workspaceFolder}/model",
+      "envFile": "${workspaceFolder}/.env",
+      "program": "../scripts/ie.py",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/model"
+      }
+    },
+    {
+      "name": "ToMi",
+      "type": "debugpy",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "${workspaceFolder}/model",
+      "envFile": "${workspaceFolder}/.env",
+      "program": "ProbSolver.py",
+      "args": ["--dataset_name=ToMi-1st", "--seed=0", "--automated"]
+      // "args": ["--dataset_name=ToMi-1st", "--seed=0", "--automated"]
+    },
+    {
       "name": "MMToM-QA",
       "type": "debugpy",
       "request": "launch",
@@ -9,21 +43,17 @@
       "cwd": "${workspaceFolder}/model",
       "envFile": "${workspaceFolder}/.env",
       "program": "ProbSolver.py",
-      "args": [
-        "--dataset_name=MMToM-QA",
-        "--seed=0",
-        "--automated",
-      ]
+      "args": ["--dataset_name=MMToM-QA", "--seed=666", "--automated"]
     },
     {
-      "name": "MMToM-QA-LLM-Base",
+      "name": "MMToM-QA-LLM-Baseline",
       "type": "debugpy",
       "request": "launch",
       "console": "integratedTerminal",
       "justMyCode": false,
       "cwd": "${workspaceFolder}/model",
       "envFile": "${workspaceFolder}/.env",
-      "program": "llm_baseline_eval.py",
-    },
+      "program": "llm_baseline_eval.py"
+    }
   ]
 }

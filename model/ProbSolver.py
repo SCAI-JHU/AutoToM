@@ -597,6 +597,73 @@ class ProblemSolver:
         print(model_record)
         return results, model_record
 
+    def solve_ie(self):
+        if len(self.choices) == 1:
+            return [1.0], {}
+        ### Parsing ###
+        if self.model_name == "automated":
+            if determine_realistic_questions(self.question) is True:
+                self.realistic = True
+                self.nested = False
+            if self.nested == None:
+                self.nested = determine_higher_order_belief(self.story + self.question)
+                print("nested", self.nested)
+                if self.check_nested(self) == False:
+                    return None, {}
+            if determine_memory_questions(self.question) is True:
+                self.memory = True
+
+        parsed_result = load_parsed_result(self.model_name, self.episode_name)
+        if parsed_result is None:
+            parsed_result = self.parse_story_and_question(self)
+        else:
+            self.load_parsed_result_into_self(self, parsed_result)
+
+        if self.memory is True:
+            return get_answer_memory_questions(
+                self.story, self.question, self.choices, self.llm
+            )
+
+        ### Extract states, actions, and other assigned variables ###
+        (
+            time_variables,
+            variable_values_with_time,
+            no_observation_hypothesis,
+            all_timesteps,
+        ) = self.information_extraction()
+
+        if self.realistic:
+            return get_answer_from_state(
+                time_variables[-1]["State"].possible_values[0], self.choices, self.llm
+            )
+
+        previous_belief = Variable("Previous Belief", True, False, ["None"], np.ones(1))
+        all_probs = []
+
+        self.estimation_dictionary = load_estimation_dict(self.dataset_name, self.seed)
+        results = None
+        action_likelihood_goal = {}
+
+        all_actions = []
+        action_name = f"{self.inf_agent_name}'s Action"
+        for i in range(all_timesteps):
+            if action_name in time_variables[i]:
+                val = time_variables[i][action_name].possible_values[0]
+                if "." not in val:
+                    all_actions.append(val + ".")
+                else:
+                    all_actions.append(val)
+
+        print("Extracted actions:", all_actions)
+
+        return (
+            time_variables,
+            variable_values_with_time,
+            no_observation_hypothesis,
+            all_timesteps,
+            all_actions,
+        )
+
     def solve(self):
         if len(self.choices) == 1:
             return [1.0], {}
@@ -711,16 +778,16 @@ class ProblemSolver:
                         if self.inf_var_name == "Goal":
                             action_likelihood_goal[i], self.estimation_dictionary, all_probs = (
                                 self.infer_goal_at_timestamp(
-                                    self,
-                                    time_variables=time_variables,
-                                    i=i,
-                                    previous_belief=previous_belief,
-                                    belief_name=belief_name,
-                                    variable_values_with_time=variable_values_with_time,
-                                    all_probs=all_probs,
-                                    no_observation_hypothesis=no_observation_hypothesis,
-                                    all_prob_estimations=self.estimation_dictionary,
-                                    goal_name=f"{self.inf_agent_name}'s Goal",
+                                self,
+                                time_variables=time_variables,
+                                i=i,
+                                previous_belief=previous_belief,
+                                belief_name=belief_name,
+                                variable_values_with_time=variable_values_with_time,
+                                all_probs=all_probs,
+                                no_observation_hypothesis=no_observation_hypothesis,
+                                all_prob_estimations=self.estimation_dictionary,
+                                goal_name=f"{self.inf_agent_name}'s Goal",
                                     previous_actions=" ".join(all_actions[:i][-2:])
                                 )
                             )
@@ -814,16 +881,16 @@ class ProblemSolver:
                             if self.inf_var_name == "Goal":
                                 action_likelihood_goal[i], self.estimation_dictionary, all_probs = (
                                     self.infer_goal_at_timestamp(
-                                        self,
-                                        time_variables=time_variables,
-                                        i=i,
-                                        previous_belief=previous_belief,
-                                        belief_name=belief_name,
-                                        variable_values_with_time=variable_values_with_time,
-                                        all_probs=all_probs,
-                                        no_observation_hypothesis=no_observation_hypothesis,
-                                        all_prob_estimations=self.estimation_dictionary,
-                                        goal_name=f"{self.inf_agent_name}'s Goal",
+                                    self,
+                                    time_variables=time_variables,
+                                    i=i,
+                                    previous_belief=previous_belief,
+                                    belief_name=belief_name,
+                                    variable_values_with_time=variable_values_with_time,
+                                    all_probs=all_probs,
+                                    no_observation_hypothesis=no_observation_hypothesis,
+                                    all_prob_estimations=self.estimation_dictionary,
+                                    goal_name=f"{self.inf_agent_name}'s Goal",
                                         previous_actions=" ".join(all_actions[:i][-2:])
                                     )
                                 )
@@ -867,7 +934,7 @@ def main(args):
     utils.set_global_seed(args.seed)
     probs.set_global_seed(args.seed)
     print(f"Random seed set to: {args.seed}")
-    
+
     dataset_name = args.dataset_name
     data = load_full_dataset(args.dataset_name)
     # data = load_dataset(dataset_name)
@@ -913,7 +980,7 @@ def main(args):
     for i, d in enumerate(data):
         results_dir = os.getenv('RESULTS_DIR', '../results')
         datum_result_path = Path(f"{results_dir}/metrics/automated_MMToM-QA_{i}_back1_reduce1_seed{args.seed}_metrics.json")
-        
+
         model_slug = os.getenv("BACKEND_MODEL", "gpt-4o")
         skip_ids = {
             "qwen/qwen3-235b-a22b-2507": [],
