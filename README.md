@@ -59,8 +59,8 @@ Please cite the paper and star this repo if you find it useful, thanks!
 
 ```bibtex
 @article{zhang2025autotom,
-  title={AutoToM: Automated Bayesian Inverse Planning and Model Discovery for Open-ended Theory of Mind},
-  author={Zhang, Zhining and Jin, Chuanyang and Jia, Mung Yao and Shu, Tianmin},
+  title={Autotom: Scaling model-based mental inference via automated agent modeling},
+  author={Zhang, Zhining and Jin, Chuanyang and Jia, Mung Yao and Zhang, Shunchi and Shu, Tianmin},
   journal={arXiv preprint arXiv:2502.15676},
   year={2025}
 }
