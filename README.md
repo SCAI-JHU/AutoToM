@@ -69,11 +69,12 @@ Please check out ``playground.ipynb``. Simply replace the story and choices with
 Please cite the paper and star this repo if you find it useful, thanks!
 
 ```bibtex
-@inproceedings{zhang2025autotom,
-  title={AutoToM: Scaling Model-based Mental Inference via Automated Agent Modeling},
-  author={Zhining Zhang and Chuanyang Jin and Mung Yao Jia and Shunchi Zhang and Tianmin Shu},
-  booktitle={The Thirty-ninth Annual Conference on Neural Information Processing Systems},
-  year={2025},
-  url={https://openreview.net/forum?id=oeZZusZheP}
+@article{zhang2026autotom,
+  title={Autotom: Scaling model-based mental inference via automated agent modeling},
+  author={Zhang, Zhining and Jin, Chuanyang and Jia, Mung Yao and Zhang, Shunchi and Shu, Tianmin},
+  journal={Advances in Neural Information Processing Systems},
+  volume={38},
+  pages={129659--129699},
+  year={2026}
 }
 ```
